@@ -65,6 +65,7 @@ dmypy.json
 credentials.json
 secrets.json
 *.secret
+.pypirc
 
 # ─── Project-specific ─────────────────────────────────────────────────────────
 *.local.toml
