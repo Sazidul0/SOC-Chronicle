@@ -1,20 +1,19 @@
-# soc-chronicle
+<p align="center">
+  <img src="https://github.com/Sazidul0/SOC-Chronicle/raw/main/soc-chronicle-lockup.svg" alt="soc-chronicle banner" width="600"/>
+</p>
 
-<div align="center">
-  <img src="https://github.com/Sazidul0/SOC-Chronicle/blob/main/soc-chronicle-lockup.svg" alt="soc-chronicle banner" width="600"/>
-</div>
+<p align="center">
+  <a href="https://pypi.org/project/soc-chronicle/"><img src="https://img.shields.io/pypi/v/soc-chronicle.svg?color=blue" alt="PyPI version"></a>
+  <a href="https://pypi.org/project/soc-chronicle/"><img src="https://img.shields.io/pypi/pyversions/soc-chronicle.svg" alt="Python versions"></a>
+  <a href="https://github.com/Sazidul0/SOC-Chronicle/actions"><img src="https://github.com/Sazidul0/SOC-Chronicle/actions/workflows/ci.yml/badge.svg" alt="Build Status"></a>
+  <a href="https://github.com/Sazidul0/SOC-Chronicle/blob/main/LICENSE"><img src="https://img.shields.io/github/license/Sazidul0/SOC-Chronicle.svg" alt="License"></a>
+  <a href="https://github.com/Sazidul0/SOC-Chronicle/stargazers"><img src="https://img.shields.io/github/stars/Sazidul0/SOC-Chronicle.svg" alt="GitHub Stars"></a>
+  <a href="https://github.com/Sazidul0/SOC-Chronicle/issues"><img src="https://img.shields.io/github/issues/Sazidul0/SOC-Chronicle.svg" alt="GitHub Issues"></a>
+</p>
 
-<div align="center">
-[![PyPI version](https://img.shields.io/pypi/v/soc-chronicle.svg?color=blue)](https://pypi.org/project/soc-chronicle/)
-[![Python versions](https://img.shields.io/pypi/pyversions/soc-chronicle.svg)](https://pypi.org/project/soc-chronicle/)
-[![Build Status](https://github.com/Sazidul0/SOC-Chronicle/actions/workflows/ci.yml/badge.svg)](https://github.com/Sazidul0/SOC-Chronicle/actions)
-[![License](https://img.shields.io/github/license/Sazidul0/SOC-Chronicle.svg)](https://github.com/Sazidul0/SOC-Chronicle/blob/main/LICENSE)
-[![GitHub Stars](https://img.shields.io/github/stars/Sazidul0/SOC-Chronicle.svg)](https://github.com/Sazidul0/SOC-Chronicle/stargazers)
-[![GitHub Issues](https://img.shields.io/github/issues/Sazidul0/SOC-Chronicle.svg)](https://github.com/Sazidul0/SOC-Chronicle/issues)
-</div>
-
-
-Open-source **Attack Investigation & Incident Narrative Engine** — transforms raw cybersecurity alerts into complete, evidence-driven attack narratives.
+<p align="center">
+  Open-source <strong>Attack Investigation & Incident Narrative Engine</strong> — transforms raw cybersecurity alerts into complete, evidence-driven attack narratives.
+</p>
 
 ## Vision
 
