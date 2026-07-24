@@ -1,0 +1,82 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "soc-chronicle"
+version = "0.1.0"
+description = "Open-source attack investigation and incident narrative engine"
+readme = "README.md"
+license = "Apache-2.0"
+requires-python = ">=3.12"
+authors = [{ name = "soc-chronicle contributors" }]
+keywords = ["security", "soc", "incident-response", "threat-hunting", "forensics"]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Information Technology",
+    "License :: OSI Approved :: Apache Software License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Topic :: Security",
+    "Typing :: Typed",
+]
+dependencies = [
+    "duckdb>=1.1",
+    "httpx>=0.28.0",
+    "networkx>=3.4",
+    "pydantic>=2.10",
+    "pydantic-settings>=2.7",
+    "pyyaml>=6.0",
+    "rich>=13.9",
+    "structlog>=24.4",
+    "typer>=0.15",
+]
+
+[project.optional-dependencies]
+dev = [
+    "mkdocs-material>=9.6",
+    "mypy>=1.14",
+    "pytest>=8.3",
+    "pytest-asyncio>=0.25",
+    "pytest-cov>=6.0",
+    "ruff>=0.9",
+]
+analytics = ["duckdb>=1.1"]
+ai = ["httpx>=0.28.0"]
+all = ["soc-chronicle[dev,analytics]"]
+
+[project.scripts]
+chronicle = "soc_chronicle.cli.main:app"
+
+[project.urls]
+Homepage = "https://github.com/soc-chronicle/soc-chronicle"
+Documentation = "https://soc-chronicle.github.io/soc-chronicle"
+Repository = "https://github.com/soc-chronicle/soc-chronicle"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/soc_chronicle"]
+
+[tool.hatch.build.targets.sdist]
+include = ["src/soc_chronicle", "tests", "examples", "README.md"]
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+testpaths = ["tests"]
+addopts = "-v --tb=short"
+
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B", "SIM"]
+
+[tool.mypy]
+python_version = "3.12"
+strict = true
+packages = ["soc_chronicle"]
+
+[tool.coverage.run]
+source = ["soc_chronicle"]
+branch = true

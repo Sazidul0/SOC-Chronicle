@@ -1,0 +1,12 @@
+site_name: soc-chronicle
+site_description: Open-source attack investigation and incident narrative engine
+theme:
+  name: material
+  palette:
+    primary: deep purple
+nav:
+  - Home: index.md
+  - Architecture: architecture.md
+  - CLI: cli.md
+  - API: api.md
+  - Plugins: plugins.md

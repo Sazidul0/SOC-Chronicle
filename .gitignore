@@ -1,0 +1,42 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.egg-info/
+dist/
+build/
+.eggs/
+*.egg
+.venv/
+venv/
+env/
+
+# Testing
+.pytest_cache/
+.coverage
+htmlcov/
+.mypy_cache/
+.ruff_cache/
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# Project
+*.local.toml
+.chronicle/
+.cache/
+
+# Secrets
+.env
+*.pem
+credentials.json
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Others
+prompt.txt

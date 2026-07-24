@@ -1,0 +1,11 @@
+{
+  "id": "alert-2026-001",
+  "title": "Suspicious PowerShell Execution",
+  "description": "WINWORD.exe spawned powershell.exe which connected to evil-c2.example.com (192.0.2.50) and downloaded payload.exe with hash aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+  "severity": "high",
+  "timestamp": "2026-07-22T09:00:00Z",
+  "host": "FIN-23",
+  "user": "Alice",
+  "rule_name": "Office Document Spawned PowerShell",
+  "tags": ["execution", "initial_access"]
+}

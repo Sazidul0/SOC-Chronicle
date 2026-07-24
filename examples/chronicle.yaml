@@ -1,0 +1,11 @@
+log_level: INFO
+default_timezone: UTC
+correlation_window_seconds: 3600
+deduplicate_iocs: true
+
+threat_intel:
+  virustotal:
+    enabled: false
+    rate_limit_per_minute: 4
+  abuseipdb:
+    enabled: false
