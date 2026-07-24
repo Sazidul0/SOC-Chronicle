@@ -2,8 +2,6 @@
 
 from __future__ import annotations
 
-from datetime import datetime
-
 from soc_chronicle.models.event import NormalizedEvent, OCSFClass
 from soc_chronicle.models.evidence import Evidence, EvidenceRef
 from soc_chronicle.models.timeline import Timeline, TimelineEntry

@@ -4,8 +4,6 @@ from __future__ import annotations
 
 from datetime import UTC, datetime
 
-import pytest
-
 from soc_chronicle.models.event import NormalizedEvent, OCSFClass
 from soc_chronicle.models.ocsf.enums import ActivityId, SeverityId
 from soc_chronicle.models.ocsf.objects import Device, NetworkEndpoint, Process, User

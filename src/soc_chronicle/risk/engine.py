@@ -2,8 +2,8 @@
 
 from __future__ import annotations
 
-from soc_chronicle.models.evidence import Evidence, EvidenceRef
 from soc_chronicle.models.event import NormalizedEvent, OCSFClass
+from soc_chronicle.models.evidence import EvidenceRef
 from soc_chronicle.models.ioc import IOC, IOCType
 from soc_chronicle.models.report import RiskAssessment, RiskFactor
 

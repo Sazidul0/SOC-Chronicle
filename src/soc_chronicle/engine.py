@@ -12,8 +12,8 @@ from soc_chronicle.graph.engine import InvestigationGraphEngine
 from soc_chronicle.intake.engine import AlertIntakeEngine
 from soc_chronicle.ioc.engine import IOCExtractionEngine
 from soc_chronicle.mitre.mapper import MitreMapper
-from soc_chronicle.models.evidence import Evidence
 from soc_chronicle.models.event import NormalizedEvent
+from soc_chronicle.models.evidence import Evidence
 from soc_chronicle.models.report import InvestigationReport
 from soc_chronicle.narrative.generator import NarrativeGenerator
 from soc_chronicle.normalization.engine import LogNormalizationEngine

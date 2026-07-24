@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 from collections import defaultdict
-from datetime import timedelta
 
 from soc_chronicle.correlation.duckdb_store import DuckDBCorrelationStore
 from soc_chronicle.models.event import NormalizedEvent

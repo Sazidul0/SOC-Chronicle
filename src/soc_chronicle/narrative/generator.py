@@ -3,8 +3,8 @@
 from __future__ import annotations
 
 from soc_chronicle.models.alert import Alert
-from soc_chronicle.models.evidence import Evidence
 from soc_chronicle.models.event import NormalizedEvent
+from soc_chronicle.models.evidence import Evidence
 from soc_chronicle.models.report import RecommendedAction
 from soc_chronicle.models.timeline import Timeline
 

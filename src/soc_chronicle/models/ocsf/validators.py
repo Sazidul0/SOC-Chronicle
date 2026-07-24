@@ -73,10 +73,7 @@ def coerce_utc_datetime(
     if dt is None:
         return None
 
-    if dt.tzinfo is None:
-        dt = dt.replace(tzinfo=UTC)
-    else:
-        dt = dt.astimezone(UTC)
+    dt = dt.replace(tzinfo=UTC) if dt.tzinfo is None else dt.astimezone(UTC)
 
     if skew_offset_seconds:
         dt = dt + timedelta(seconds=skew_offset_seconds)
@@ -250,7 +247,7 @@ def serialize_raw_data(raw: Any) -> str:
         return str(raw)
 
 
-def safe_model_construct(model_cls: type[T], data: dict[str, Any]) -> T:
+def safe_model_construct[T: BaseModel](model_cls: type[T], data: dict[str, Any]) -> T:
     """Construct a Pydantic model, dropping fields that fail validation.
 
     Each field is validated individually; invalid fields are omitted rather than

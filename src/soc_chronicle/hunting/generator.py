@@ -19,11 +19,11 @@ class HuntingGenerator:
 
         sigma_rules: list[str] = []
         if processes:
-            proc_list = "|".join(processes)
+            "|".join(processes)
             sigma_rules.append(
-                f"title: Hunt - Observed Processes\n"
-                f"logsource:\n  category: process_creation\n"
-                f"detection:\n  selection:\n    Image|endswith:\n"
+                "title: Hunt - Observed Processes\n"
+                "logsource:\n  category: process_creation\n"
+                "detection:\n  selection:\n    Image|endswith:\n"
                 + "\n".join(f"      - '{p}'" for p in processes[:5])
                 + "\n  condition: selection"
             )

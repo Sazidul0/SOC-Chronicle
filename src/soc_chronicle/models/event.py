@@ -40,7 +40,7 @@ from soc_chronicle.models.ocsf.validators import (
 )
 
 # Re-export for backward compatibility with existing imports.
-__all__ = ["NormalizedEvent", "OCSFClass", "SourceType", "safe_build_normalized_event"]
+__all__ = ["NormalizedEvent", "OCSFClass", "SourceType"]
 
 
 class NormalizedEvent(BaseModel):
@@ -158,9 +158,8 @@ class NormalizedEvent(BaseModel):
             object.__setattr__(self, "raw_data", serialize_raw_data(self.raw))
 
         # Populate flat fields from nested objects when missing.
-        if self.device:
-            if not self.host:
-                object.__setattr__(self, "host", self.device.hostname or self.device.name)
+        if self.device and not self.host:
+            object.__setattr__(self, "host", self.device.hostname or self.device.name)
         if self.actor and self.actor.user and not self.user:
             object.__setattr__(self, "user", self.actor.user.name)
         if self.process:
@@ -211,16 +210,19 @@ class NormalizedEvent(BaseModel):
             object.__setattr__(self, "device", Device(hostname=self.host, name=self.host))
         if self.user and not self.actor:
             object.__setattr__(self, "actor", Actor(user=User(name=self.user)))
-        if any(
-            (
-                self.process_name,
-                self.process_pid,
-                self.process_guid,
-                self.parent_process_name,
-                self.parent_process_pid,
-                self.parent_process_guid,
+        if (
+            any(
+                (
+                    self.process_name,
+                    self.process_pid,
+                    self.process_guid,
+                    self.parent_process_name,
+                    self.parent_process_pid,
+                    self.parent_process_guid,
+                )
             )
-        ) and not self.process:
+            and not self.process
+        ):
             parent = None
             if self.parent_process_name or self.parent_process_pid or self.parent_process_guid:
                 parent = Process(
@@ -241,23 +243,23 @@ class NormalizedEvent(BaseModel):
         if (self.file_path or self.file_hash) and not self.file:
             hashes = [Fingerprint(value=self.file_hash)] if self.file_hash else None
             object.__setattr__(self, "file", File(path=self.file_path, hashes=hashes))
-        if any((self.src_ip, self.src_port, self.dst_ip, self.dst_port, self.protocol, self.domain)):
-            if not self.connection_info:
-                object.__setattr__(
-                    self,
-                    "connection_info",
-                    NetworkConnection(
-                        protocol_name=self.protocol,
-                        src_endpoint=NetworkEndpoint(ip=self.src_ip, port=self.src_port)
-                        if self.src_ip or self.src_port
-                        else None,
-                        dst_endpoint=NetworkEndpoint(
-                            ip=self.dst_ip, port=self.dst_port, domain=self.domain
-                        )
-                        if self.dst_ip or self.dst_port or self.domain
-                        else None,
-                    ),
-                )
+        if (
+            any((self.src_ip, self.src_port, self.dst_ip, self.dst_port, self.protocol, self.domain))
+            and not self.connection_info
+        ):
+            object.__setattr__(
+                self,
+                "connection_info",
+                NetworkConnection(
+                    protocol_name=self.protocol,
+                    src_endpoint=NetworkEndpoint(ip=self.src_ip, port=self.src_port)
+                    if self.src_ip or self.src_port
+                    else None,
+                    dst_endpoint=NetworkEndpoint(ip=self.dst_ip, port=self.dst_port, domain=self.domain)
+                    if self.dst_ip or self.dst_port or self.domain
+                    else None,
+                ),
+            )
         if self.session_id and not self.session:
             object.__setattr__(self, "session", Session(uid=self.session_id))
 
@@ -287,6 +289,7 @@ class NormalizedEvent(BaseModel):
         the normalization engine on malformed vendor data.
         """
         from soc_chronicle.models.ocsf.factory import safe_build_normalized_event
+
         return safe_build_normalized_event(data, raw_payload=raw_payload, context=context)
 
     def type_uid(self) -> int:
@@ -311,9 +314,7 @@ class NormalizedEvent(BaseModel):
         if self.class_uid == OCSFClass.PROCESS_ACTIVITY:
             return build_typed_event(OCSFClass.PROCESS_ACTIVITY, process=self.process, **base_kwargs)
         if self.class_uid == OCSFClass.FILE_ACTIVITY:
-            return build_typed_event(
-                OCSFClass.FILE_ACTIVITY, file=self.file, process=self.process, **base_kwargs
-            )
+            return build_typed_event(OCSFClass.FILE_ACTIVITY, file=self.file, process=self.process, **base_kwargs)
         if self.class_uid == OCSFClass.NETWORK_ACTIVITY:
             return build_typed_event(
                 OCSFClass.NETWORK_ACTIVITY,
@@ -325,9 +326,7 @@ class NormalizedEvent(BaseModel):
             src_ep = None
             if self.src_ip or self.src_port:
                 src_ep = NetworkEndpoint(ip=self.src_ip, port=self.src_port)
-            return build_typed_event(
-                OCSFClass.AUTHENTICATION, session=self.session, src_endpoint=src_ep, **base_kwargs
-            )
+            return build_typed_event(OCSFClass.AUTHENTICATION, session=self.session, src_endpoint=src_ep, **base_kwargs)
         if self.class_uid == OCSFClass.REGISTRY_KEY_ACTIVITY:
             return build_typed_event(
                 OCSFClass.REGISTRY_KEY_ACTIVITY,

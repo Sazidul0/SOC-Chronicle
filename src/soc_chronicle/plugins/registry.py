@@ -58,10 +58,7 @@ class PluginRegistry:
             eps = importlib.metadata.entry_points().get(self.ENTRY_POINT_GROUP, [])  # type: ignore[union-attr]
         for ep in eps:
             plugin = ep.load()
-            if isinstance(plugin, type):
-                instance = plugin()
-            else:
-                instance = plugin
+            instance = plugin() if isinstance(plugin, type) else plugin
             if isinstance(instance, LogParserPlugin):
                 self.log_parsers[instance.name] = instance
             elif isinstance(instance, EnrichmentProviderPlugin):
