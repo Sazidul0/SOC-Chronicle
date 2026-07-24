@@ -247,7 +247,7 @@ def serialize_raw_data(raw: Any) -> str:
         return str(raw)
 
 
-def safe_model_construct[T: BaseModel](model_cls: type[T], data: dict[str, Any]) -> T:
+def safe_model_construct(model_cls: type[T], data: dict[str, Any]) -> T:
     """Construct a Pydantic model, dropping fields that fail validation.
 
     Each field is validated individually; invalid fields are omitted rather than
