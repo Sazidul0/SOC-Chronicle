@@ -44,6 +44,8 @@ dev = [
     "pytest-cov>=6.0",
     "ruff>=0.9",
     "pip-audit>=2.7",
+    "types-networkx>=3.0",
+    "types-PyYAML>=6.0",
 ]
 analytics = ["duckdb>=1.1"]
 ai = ["httpx>=0.28.0"]
