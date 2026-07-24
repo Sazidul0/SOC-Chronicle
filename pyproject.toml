@@ -53,9 +53,9 @@ all = ["soc-chronicle[dev,analytics]"]
 chronicle = "soc_chronicle.cli.main:app"
 
 [project.urls]
-Homepage = "https://github.com/soc-chronicle/soc-chronicle"
-Documentation = "https://soc-chronicle.github.io/soc-chronicle"
-Repository = "https://github.com/soc-chronicle/soc-chronicle"
+Homepage = "https://github.com/Sazidul0/SOC-Chronicle"
+Documentation = "https://github.com/Sazidul0/SOC-Chronicle"
+Repository = "https://github.com/Sazidul0/SOC-Chronicle"
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/soc_chronicle"]
