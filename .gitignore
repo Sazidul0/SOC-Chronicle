@@ -1,42 +1,97 @@
-# Python
+# ─── Python ───────────────────────────────────────────────────────────────────
 __pycache__/
 *.py[cod]
 *$py.class
+*.so
+
+# Distribution / packaging
+*.egg
 *.egg-info/
 dist/
 build/
+eggs/
 .eggs/
-*.egg
+wheels/
+MANIFEST
+pip-wheel-metadata/
+sdist/
+
+# ─── Virtual Environments ─────────────────────────────────────────────────────
 .venv/
 venv/
 env/
+ENV/
+.env.bak
 
-# Testing
+# ─── Testing & Coverage ───────────────────────────────────────────────────────
 .pytest_cache/
 .coverage
+.coverage.*
 htmlcov/
+coverage.xml
+*.cover
+nosetests.xml
+test-results/
+
+# ─── Type Checkers ────────────────────────────────────────────────────────────
 .mypy_cache/
+.dmypy.json
+dmypy.json
+.pytype/
+.pyre/
+
+# ─── Linters / Formatters ─────────────────────────────────────────────────────
 .ruff_cache/
 
-# IDE
+# ─── IDEs & Editors ───────────────────────────────────────────────────────────
 .idea/
 .vscode/
 *.swp
 *.swo
+*.swn
+*~
+.project
+.pydevproject
+.settings/
 
-# Project
+# ─── Security & Secrets ───────────────────────────────────────────────────────
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+*.p12
+*.pfx
+credentials.json
+secrets.json
+*.secret
+
+# ─── Project-specific ─────────────────────────────────────────────────────────
 *.local.toml
 .chronicle/
 .cache/
-
-# Secrets
-.env
-*.pem
-credentials.json
-
-# OS
-.DS_Store
-Thumbs.db
-
-# Others
 prompt.txt
+*.db
+*.duckdb
+*.duckdb.wal
+
+# ─── Documentation builds ─────────────────────────────────────────────────────
+site/
+docs/_build/
+
+# ─── OS artifacts ─────────────────────────────────────────────────────────────
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+desktop.ini
+
+# ─── Jupyter ──────────────────────────────────────────────────────────────────
+.ipynb_checkpoints/
+*.ipynb
+
+# ─── Docker ───────────────────────────────────────────────────────────────────
+*.override.yml

@@ -3,12 +3,12 @@
 from __future__ import annotations
 
 import json
-from datetime import datetime
+import uuid
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
 import yaml
-import uuid
 
 from soc_chronicle.models.alert import Alert, AlertSource
 
@@ -77,13 +77,13 @@ class AlertIntakeEngine:
     @staticmethod
     def _parse_timestamp(value: Any) -> datetime:
         if value is None:
-            return datetime.utcnow()
+            return datetime.now(tz=UTC)
         if isinstance(value, datetime):
             return value
         if isinstance(value, (int, float)):
-            return datetime.utcfromtimestamp(value)
+            return datetime.fromtimestamp(value, tz=UTC)
         text = str(value).replace("Z", "+00:00")
         try:
-            return datetime.fromisoformat(text.replace("Z", "+00:00"))
+            return datetime.fromisoformat(text)
         except ValueError:
-            return datetime.utcnow()
+            return datetime.now(tz=UTC)

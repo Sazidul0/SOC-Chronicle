@@ -4,10 +4,9 @@ from __future__ import annotations
 
 import asyncio
 from abc import ABC, abstractmethod
-from typing import Any
+from typing import Any, cast
 
 import httpx
-from typing import cast
 
 from soc_chronicle.config.settings import ChronicleSettings, ThreatIntelProviderConfig
 from soc_chronicle.models.ioc import IOC, IOCType

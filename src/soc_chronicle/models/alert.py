@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from datetime import datetime
+from datetime import UTC, datetime
 from enum import StrEnum
 from typing import Any
 from uuid import uuid4
@@ -31,7 +31,7 @@ class Alert(BaseModel):
     description: str | None = None
     severity: str = "medium"
     source: AlertSource = AlertSource.UNKNOWN
-    timestamp: datetime = Field(default_factory=datetime.utcnow)
+    timestamp: datetime = Field(default_factory=lambda: datetime.now(tz=UTC))
     raw: dict[str, Any] = Field(default_factory=dict)
     host: str | None = None
     user: str | None = None
