@@ -1,8 +1,8 @@
-<div align="center">
-  <img src="soc-chronicle-lockup.svg" alt="soc-chronicle banner" width="600"/>
-</div>
-
 # soc-chronicle
+
+<div align="center">
+  <img src="https://github.com/Sazidul0/SOC-Chronicle/blob/main/soc-chronicle-lockup.svg" alt="soc-chronicle banner" width="600"/>
+</div>
 
 [![PyPI version](https://img.shields.io/pypi/v/soc-chronicle.svg?color=blue)](https://pypi.org/project/soc-chronicle/)
 [![Python versions](https://img.shields.io/pypi/pyversions/soc-chronicle.svg)](https://pypi.org/project/soc-chronicle/)

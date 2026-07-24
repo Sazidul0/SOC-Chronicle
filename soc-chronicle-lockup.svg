@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 260" width="900" height="260">
+  <rect x="0" y="0" width="900" height="260" rx="28" fill="#0B0F1D"/>
+  <rect x="1" y="1" width="898" height="258" rx="27" fill="none" stroke="#1A2036" stroke-width="2"/>
+
+  <!-- magnifying glass: investigation -->
+  <circle cx="120" cy="118" r="68" fill="none" stroke="#E7ECF7" stroke-width="12"/>
+  <line x1="168" y1="166" x2="210" y2="208" stroke="#E7ECF7" stroke-width="15" stroke-linecap="round"/>
+
+  <!-- attack graph / correlation path -->
+  <g stroke="#9FB3D9" stroke-width="3" stroke-linecap="round" opacity="0.9" fill="none">
+    <line x1="88" y1="158" x2="102" y2="132"/>
+    <line x1="102" y1="132" x2="116" y2="106"/>
+    <line x1="116" y1="106" x2="142" y2="98"/>
+    <line x1="142" y1="98" x2="156" y2="82"/>
+  </g>
+
+  <!-- blast radius / impact node -->
+  <circle cx="156" cy="82" r="17" fill="none" stroke="#FFB35C" stroke-width="1.5" stroke-dasharray="3 4" opacity="0.6"/>
+  <circle cx="156" cy="82" r="7" fill="none" stroke="#FFB35C" stroke-width="3"/>
+
+  <!-- intermediate correlated events -->
+  <circle cx="142" cy="98" r="6" fill="#7FA0F5"/>
+  <circle cx="116" cy="106" r="6" fill="#7FA0F5"/>
+  <circle cx="102" cy="132" r="6" fill="#7FA0F5"/>
+
+  <!-- patient zero / root cause -->
+  <circle cx="88" cy="158" r="14" fill="none" stroke="#FF7A59" stroke-width="2" opacity="0.5"/>
+  <circle cx="88" cy="158" r="9" fill="#FF7A59"/>
+
+  <!-- wordmark -->
+  <text x="262" y="132" font-family="ui-monospace, 'Cascadia Code', 'SF Mono', Consolas, monospace" font-size="46" font-weight="600">
+    <tspan fill="#5B6B8C">$ </tspan><tspan fill="#E7ECF7">soc-chronicle</tspan><tspan fill="#FF7A59">_</tspan>
+  </text>
+  <text x="264" y="163" font-family="ui-sans-serif, Segoe UI, Arial, sans-serif" font-size="16" fill="#8493B5" letter-spacing="0.3">
+    Attack Investigation &amp; Incident Narrative Engine
+  </text>
+</svg>
