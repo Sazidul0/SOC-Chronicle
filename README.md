@@ -4,12 +4,15 @@
   <img src="https://github.com/Sazidul0/SOC-Chronicle/blob/main/soc-chronicle-lockup.svg" alt="soc-chronicle banner" width="600"/>
 </div>
 
+<div align="center">
 [![PyPI version](https://img.shields.io/pypi/v/soc-chronicle.svg?color=blue)](https://pypi.org/project/soc-chronicle/)
 [![Python versions](https://img.shields.io/pypi/pyversions/soc-chronicle.svg)](https://pypi.org/project/soc-chronicle/)
 [![Build Status](https://github.com/Sazidul0/SOC-Chronicle/actions/workflows/ci.yml/badge.svg)](https://github.com/Sazidul0/SOC-Chronicle/actions)
 [![License](https://img.shields.io/github/license/Sazidul0/SOC-Chronicle.svg)](https://github.com/Sazidul0/SOC-Chronicle/blob/main/LICENSE)
 [![GitHub Stars](https://img.shields.io/github/stars/Sazidul0/SOC-Chronicle.svg)](https://github.com/Sazidul0/SOC-Chronicle/stargazers)
 [![GitHub Issues](https://img.shields.io/github/issues/Sazidul0/SOC-Chronicle.svg)](https://github.com/Sazidul0/SOC-Chronicle/issues)
+</div>
+
 
 Open-source **Attack Investigation & Incident Narrative Engine** — transforms raw cybersecurity alerts into complete, evidence-driven attack narratives.
 
@@ -25,8 +28,8 @@ soc-chronicle sits between existing detection platforms (SIEM, EDR, XDR, Cloud S
 ## Quick Start
 
 ```bash
-# Install
-pip install -e ".[dev]"
+# Install from PyPI
+pip install soc-chronicle
 
 # Run an investigation
 chronicle investigate examples/alert.json --logs examples/logs
