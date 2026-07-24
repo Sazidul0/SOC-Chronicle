@@ -52,10 +52,7 @@ class PluginRegistry:
         self.exporters: dict[str, ExporterPlugin] = {}
 
     def discover(self) -> None:
-        try:
-            eps = importlib.metadata.entry_points(group=self.ENTRY_POINT_GROUP)
-        except TypeError:
-            eps = importlib.metadata.entry_points().get(self.ENTRY_POINT_GROUP, [])  # type: ignore[union-attr]
+        eps = importlib.metadata.entry_points(group=self.ENTRY_POINT_GROUP)
         for ep in eps:
             plugin = ep.load()
             instance = plugin() if isinstance(plugin, type) else plugin

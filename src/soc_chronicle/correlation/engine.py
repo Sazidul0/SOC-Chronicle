@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from collections import defaultdict
+from typing import Any
 
 from soc_chronicle.correlation.duckdb_store import DuckDBCorrelationStore
 from soc_chronicle.models.event import NormalizedEvent
@@ -121,7 +122,7 @@ class CorrelationEngine:
 
     def process_lineage(
         self, events: list[NormalizedEvent] | None = None
-    ) -> dict[str, list[str]] | list:
+    ) -> dict[str, list[str]] | list[Any]:
         """Build parent -> child process relationships.
 
         When DuckDB is enabled, returns structured :class:`ProcessLineageLink` rows
@@ -151,7 +152,7 @@ class CorrelationEngine:
                 seen.add(event.user.lower())
         return users
 
-    def network_to_process(self, events: list[NormalizedEvent] | None = None) -> list:
+    def network_to_process(self, events: list[NormalizedEvent] | None = None) -> list[Any]:
         """Link network events to processes (DuckDB only)."""
         if not self.use_duckdb:
             return []
@@ -159,7 +160,7 @@ class CorrelationEngine:
             self.store.bulk_insert(events)
         return self.store.network_to_process(self.window_seconds)
 
-    def identity_correlation(self, events: list[NormalizedEvent] | None = None) -> list:
+    def identity_correlation(self, events: list[NormalizedEvent] | None = None) -> list[Any]:
         """Bind IPs to users via auth log joins (DuckDB only)."""
         if not self.use_duckdb:
             return []

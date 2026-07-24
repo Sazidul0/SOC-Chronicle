@@ -223,9 +223,9 @@ class NormalizedEvent(BaseModel):
             )
             and not self.process
         ):
-            parent = None
+            parent_proc: Process | None = None
             if self.parent_process_name or self.parent_process_pid or self.parent_process_guid:
-                parent = Process(
+                parent_proc = Process(
                     name=self.parent_process_name,
                     pid=self.parent_process_pid,
                     uid=self.parent_process_guid,
@@ -237,7 +237,7 @@ class NormalizedEvent(BaseModel):
                     name=self.process_name,
                     pid=self.process_pid,
                     uid=self.process_guid,
-                    parent_process=parent,
+                    parent_process=parent_proc,
                 ),
             )
         if (self.file_path or self.file_hash) and not self.file:

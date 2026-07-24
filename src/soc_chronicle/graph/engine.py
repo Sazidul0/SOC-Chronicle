@@ -14,7 +14,7 @@ class InvestigationGraphEngine:
     """Build and analyze attack graphs from normalized events."""
 
     def build(self, events: list[NormalizedEvent]) -> InvestigationGraph:
-        graph = nx.DiGraph()
+        graph: nx.DiGraph[Any] = nx.DiGraph()
         for event in events:
             self._add_event(graph, event)
         return self._to_model(graph)
@@ -22,7 +22,7 @@ class InvestigationGraphEngine:
     def shortest_path(self, graph: InvestigationGraph, source: str, target: str) -> list[str] | None:
         nx_graph = self._from_model(graph)
         try:
-            return nx.shortest_path(nx_graph, source, target)
+            return list(nx.shortest_path(nx_graph, source, target))
         except (nx.NetworkXNoPath, nx.NodeNotFound):
             return None
 
@@ -48,7 +48,7 @@ class InvestigationGraphEngine:
                     lateral.append(edge)
         return lateral
 
-    def _add_event(self, graph: nx.DiGraph, event: NormalizedEvent) -> None:
+    def _add_event(self, graph: nx.DiGraph[Any], event: NormalizedEvent) -> None:
         host_id = self._ensure_node(graph, NodeType.DEVICE, event.host or "unknown-host")
         if event.user:
             user_id = self._ensure_node(graph, NodeType.USER, event.user)
@@ -84,7 +84,7 @@ class InvestigationGraphEngine:
 
     @staticmethod
     def _ensure_node(
-        graph: nx.DiGraph, node_type: NodeType, label: str, props: dict[str, Any] | None = None
+        graph: nx.DiGraph[Any], node_type: NodeType, label: str, props: dict[str, Any] | None = None
     ) -> str:
         node_id = f"{node_type.value}:{label.lower()}"
         if node_id not in graph:
@@ -92,7 +92,7 @@ class InvestigationGraphEngine:
         return node_id
 
     @staticmethod
-    def _to_model(graph: nx.DiGraph) -> InvestigationGraph:
+    def _to_model(graph: nx.DiGraph[Any]) -> InvestigationGraph:
         nodes = [
             GraphNode(
                 id=node_id,
@@ -114,8 +114,8 @@ class InvestigationGraphEngine:
         return InvestigationGraph(nodes=nodes, edges=edges)
 
     @staticmethod
-    def _from_model(model: InvestigationGraph) -> nx.DiGraph:
-        graph = nx.DiGraph()
+    def _from_model(model: InvestigationGraph) -> nx.DiGraph[Any]:
+        graph: nx.DiGraph[Any] = nx.DiGraph()
         for node in model.nodes:
             graph.add_node(node.id, type=node.type.value, label=node.label, **node.properties)
         for edge in model.edges:

@@ -5,6 +5,7 @@ from __future__ import annotations
 import logging
 
 import structlog
+from typing import Any
 
 
 def configure_logging(level: str = "INFO") -> None:
@@ -25,5 +26,5 @@ def configure_logging(level: str = "INFO") -> None:
     )
 
 
-def get_logger(name: str) -> structlog.stdlib.BoundLogger:
+def get_logger(name: str) -> Any:
     return structlog.get_logger(name)

@@ -7,6 +7,7 @@ from abc import ABC, abstractmethod
 from typing import Any
 
 import httpx
+from typing import cast
 
 from soc_chronicle.config.settings import ChronicleSettings, ThreatIntelProviderConfig
 from soc_chronicle.models.ioc import IOC, IOCType
@@ -70,7 +71,7 @@ class AbuseIPDBProvider(ThreatIntelProvider):
             return {"provider": self.name, "status": "skipped"}
         base = self.config.base_url or "https://api.abuseipdb.com/api/v2"
         headers = {"Key": self.config.api_key, "Accept": "application/json"}
-        params = {"ipAddress": ioc.value, "maxAgeInDays": 90}
+        params: dict[str, str | int] = {"ipAddress": ioc.value, "maxAgeInDays": 90}
         async with httpx.AsyncClient(timeout=self.config.timeout_seconds) as client:
             response = await client.get(f"{base}/check", headers=headers, params=params)
             response.raise_for_status()
@@ -107,6 +108,12 @@ class ThreatIntelEngine:
             return [{"status": "no_providers_configured"}]
         tasks = [self._enrich_ioc(ioc) for ioc in iocs]
         return await asyncio.gather(*tasks)
+
+    async def _fetch(self, url: str, headers: dict[str, str], params: dict[str, Any] | None = None) -> dict[str, Any]:
+        async with httpx.AsyncClient() as client:
+            response = await client.get(url, headers=headers, params=params)
+            response.raise_for_status()
+            return cast(dict[str, Any], response.json())
 
     async def _enrich_ioc(self, ioc: IOC) -> dict[str, Any]:
         results: list[dict[str, Any]] = []

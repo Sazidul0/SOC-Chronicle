@@ -5,7 +5,7 @@ from __future__ import annotations
 import json
 from datetime import datetime
 from pathlib import Path
-from typing import Any
+from typing import Any, cast
 
 from soc_chronicle.models.event import NormalizedEvent, OCSFClass
 from soc_chronicle.models.ocsf.validators import serialize_raw_data
@@ -38,8 +38,10 @@ class LogNormalizationEngine:
             if path.suffix.lower() == ".json":
                 content = json.load(f)
                 if isinstance(content, list):
-                    return [self.normalize_record(r, parser) for r in content]
-                return [self.normalize_record(content, parser)]
+                    parsed = [self.normalize_record(r, parser) for r in content]
+                    return [e for e in parsed if e is not None]
+                res = self.normalize_record(content, parser)
+                return [res] if res is not None else []
             events: list[NormalizedEvent] = []
             for line in f:
                 line = line.strip()
@@ -49,7 +51,10 @@ class LogNormalizationEngine:
                     record = json.loads(line)
                 except json.JSONDecodeError:
                     record = {"message": line, "raw_source": path.name}
-                events.append(self.normalize_record(record, parser))
+                
+                norm_evt = self.normalize_record(record, parser)
+                if norm_evt is not None:
+                    events.append(norm_evt)
             return events
 
     def normalize_directory(self, directory: Path, parser: str | None = None) -> list[NormalizedEvent]:
@@ -61,10 +66,10 @@ class LogNormalizationEngine:
 
     def normalize_record(
         self, record: dict[str, Any], parser: str | None = None
-    ) -> NormalizedEvent:
+    ) -> NormalizedEvent | None:
         detected = parser or self._detect_parser(record)
         method_name = self.PARSER_REGISTRY.get(detected, "_parse_generic")
-        return getattr(self, method_name)(record)
+        return cast(NormalizedEvent | None, getattr(self, method_name)(record))
 
     def _detect_parser(self, record: dict[str, Any]) -> str:
         if "EventID" in record or record.get("source") == "Microsoft-Windows-Sysmon" or "event_id" in record:

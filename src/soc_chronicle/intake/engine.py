@@ -8,6 +8,7 @@ from pathlib import Path
 from typing import Any
 
 import yaml
+import uuid
 
 from soc_chronicle.models.alert import Alert, AlertSource
 
@@ -59,7 +60,7 @@ class AlertIntakeEngine:
         title = str(data.get("title") or data.get("name") or data.get("rule_name") or "Untitled Alert")
         timestamp = self._parse_timestamp(data.get("timestamp") or data.get("@timestamp"))
         return Alert(
-            id=alert_id or Alert().id,
+            id=alert_id or str(uuid.uuid4()),
             title=title,
             description=data.get("description") or data.get("message"),
             severity=str(data.get("severity") or data.get("level") or "medium").lower(),
