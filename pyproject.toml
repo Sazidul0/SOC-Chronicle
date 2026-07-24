@@ -43,7 +43,7 @@ dev = [
     "pytest-asyncio>=0.25",
     "pytest-cov>=6.0",
     "ruff>=0.9",
-    "safety>=3.2",
+    "pip-audit>=2.7",
 ]
 analytics = ["duckdb>=1.1"]
 ai = ["httpx>=0.28.0"]
