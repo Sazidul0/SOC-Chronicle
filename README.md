@@ -1,15 +1,11 @@
 # soc-chronicle
 
-[![PyPI version](https://img.shields.io/pypi/v/soc-chronicle.svg)](https://pypi.org/project/soc-chronicle/)
+[![PyPI version](https://img.shields.io/pypi/v/soc-chronicle.svg?color=blue)](https://pypi.org/project/soc-chronicle/)
 [![Python versions](https://img.shields.io/pypi/pyversions/soc-chronicle.svg)](https://pypi.org/project/soc-chronicle/)
-[![License](https://img.shields.io/github/license/Sazidul0/SOC-Chronicle.svg)](https://github.com/Sazidul0/SOC-Chronicle/blob/main/LICENSE)
 [![Build Status](https://github.com/Sazidul0/SOC-Chronicle/actions/workflows/ci.yml/badge.svg)](https://github.com/Sazidul0/SOC-Chronicle/actions)
-[![Code Style: Ruff](https://img.shields.io/badge/code%20style-ruff-000000.svg)](https://github.com/astral-sh/ruff)
-[![Platform](https://img.shields.io/badge/platform-linux%20%7C%20macos%20%7C%20windows-lightgrey)](https://github.com/Sazidul0/SOC-Chronicle)
+[![License](https://img.shields.io/github/license/Sazidul0/SOC-Chronicle.svg)](https://github.com/Sazidul0/SOC-Chronicle/blob/main/LICENSE)
 [![GitHub Stars](https://img.shields.io/github/stars/Sazidul0/SOC-Chronicle.svg)](https://github.com/Sazidul0/SOC-Chronicle/stargazers)
-[![GitHub Forks](https://img.shields.io/github/forks/Sazidul0/SOC-Chronicle.svg)](https://github.com/Sazidul0/SOC-Chronicle/network/members)
 [![GitHub Issues](https://img.shields.io/github/issues/Sazidul0/SOC-Chronicle.svg)](https://github.com/Sazidul0/SOC-Chronicle/issues)
-[![Downloads](https://img.shields.io/pypi/dm/soc-chronicle.svg)](https://pypi.org/project/soc-chronicle/)
 
 Open-source **Attack Investigation & Incident Narrative Engine** — transforms raw cybersecurity alerts into complete, evidence-driven attack narratives.
 
