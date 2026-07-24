@@ -8,7 +8,14 @@ from uuid import uuid4
 
 from pydantic import BaseModel, ConfigDict, Field, computed_field, field_validator, model_validator
 
-from soc_chronicle.models.ocsf.enums import ActivityId, OCSFClass, SeverityId, StatusId
+from soc_chronicle.models.ocsf.enums import (
+    ActivityId,
+    OCSFClass,
+    SeverityId,
+    SourceType,
+    StatusId,
+    compute_type_uid,
+)
 from soc_chronicle.models.ocsf.events import BaseOCSFEvent, build_typed_event
 from soc_chronicle.models.ocsf.objects import (
     Actor,
@@ -33,7 +40,7 @@ from soc_chronicle.models.ocsf.validators import (
 )
 
 # Re-export for backward compatibility with existing imports.
-__all__ = ["NormalizedEvent", "OCSFClass"]
+__all__ = ["NormalizedEvent", "OCSFClass", "SourceType", "safe_build_normalized_event"]
 
 
 class NormalizedEvent(BaseModel):
@@ -266,6 +273,26 @@ class NormalizedEvent(BaseModel):
 
         return self
 
+    @classmethod
+    def from_raw(
+        cls,
+        data: dict[str, Any],
+        *,
+        raw_payload: Any = None,
+        context: Any = None,
+    ) -> NormalizedEvent | None:
+        """Gracefully construct an event from a parser-produced dictionary.
+
+        Delegates to :func:`safe_build_normalized_event` so parsers never crash
+        the normalization engine on malformed vendor data.
+        """
+        from soc_chronicle.models.ocsf.factory import safe_build_normalized_event
+        return safe_build_normalized_event(data, raw_payload=raw_payload, context=context)
+
+    def type_uid(self) -> int:
+        """Return the computed OCSF type_uid for this event."""
+        return compute_type_uid(self.class_uid, self.activity_id)
+
     def to_ocsf_event(self) -> BaseOCSFEvent:
         """Convert to a typed OCSF event model."""
         base_kwargs: dict[str, Any] = {
@@ -312,6 +339,19 @@ class NormalizedEvent(BaseModel):
             return build_typed_event(
                 OCSFClass.DNS_ACTIVITY,
                 query=self.domain,
+                connection_info=self.connection_info,
+                **base_kwargs,
+            )
+        if self.class_uid == OCSFClass.REGISTRY_VALUE_ACTIVITY:
+            return build_typed_event(
+                OCSFClass.REGISTRY_VALUE_ACTIVITY,
+                reg_key=self.registry_key,
+                process=self.process,
+                **base_kwargs,
+            )
+        if self.class_uid == OCSFClass.HTTP_ACTIVITY:
+            return build_typed_event(
+                OCSFClass.HTTP_ACTIVITY,
                 connection_info=self.connection_info,
                 **base_kwargs,
             )

@@ -16,6 +16,16 @@ class LogNormalizationEngine:
 
     PARSER_REGISTRY: dict[str, str] = {
         "sysmon": "_parse_sysmon",
+        "windows_security": "_parse_windows_security",
+        "auditd": "_parse_auditd",
+        "macos_unified": "_parse_macos_unified",
+        "android_log": "_parse_android_log",
+        "zeek": "_parse_zeek",
+        "web_server": "_parse_web_server",
+        "firewall": "_parse_firewall",
+        "wazuh": "_parse_wazuh",
+        "splunk": "_parse_splunk",
+        "azure_activity": "_parse_azure_activity",
         "crowdstrike": "_parse_crowdstrike",
         "elastic_ecs": "_parse_elastic_ecs",
         "cloudtrail": "_parse_cloudtrail",
@@ -57,8 +67,28 @@ class LogNormalizationEngine:
         return getattr(self, method_name)(record)
 
     def _detect_parser(self, record: dict[str, Any]) -> str:
-        if "EventID" in record or record.get("source") == "Microsoft-Windows-Sysmon":
-            return "sysmon"
+        if "EventID" in record or record.get("source") == "Microsoft-Windows-Sysmon" or "event_id" in record:
+            channel = str(record.get("Channel") or record.get("channel") or "").lower()
+            if channel == "security":
+                return "windows_security"
+            if record.get("source") == "Microsoft-Windows-Sysmon" or "EventID" in record:
+                return "sysmon"
+        if "type" in record and str(record.get("type", "")).lower() in ("auditd", "syscall", "execve"):
+            return "auditd"
+        if "logType" in record and record.get("logType") == "macOS":
+            return "macos_unified"
+        if "logcat" in record or (record.get("tag") and "pid" in record and "message" in record):
+            return "android_log"
+        if "_path" in record and "ts" in record:
+            return "zeek"
+        if "status" in record and ("clientip" in record or "remote_addr" in record or "request" in record):
+            return "web_server"
+        if "rule" in record and "agent" in record and "id" in record.get("rule", {}):
+            return "wazuh"
+        if "sourcetype" in record:
+            return "splunk"
+        if "tenantId" in record and "operationName" in record:
+            return "azure_activity"
         if "event_simpleName" in record or "aid" in record:
             return "crowdstrike"
         if "event.action" in record or record.get("ecs", {}).get("version"):
@@ -67,6 +97,8 @@ class LogNormalizationEngine:
             return "cloudtrail"
         if "event_type" in record and "src_ip" in record:
             return "suricata"
+        if record.get("action") in ("allow", "deny", "block", "drop") and "src_ip" in record and "dst_ip" in record:
+            return "firewall"
         return "generic"
 
     def _parse_sysmon(self, record: dict[str, Any]) -> NormalizedEvent:
@@ -79,9 +111,9 @@ class LogNormalizationEngine:
         elif event_id in {11, 23}:
             class_uid = OCSFClass.FILE_ACTIVITY
             activity = "File Created"
-        elif event_id == 13:
-            class_uid = OCSFClass.REGISTRY_KEY_ACTIVITY
-            activity = "Registry Value Set"
+        elif event_id in {12, 13, 14}:
+            class_uid = OCSFClass.REGISTRY_KEY_ACTIVITY if event_id == 12 else OCSFClass.REGISTRY_VALUE_ACTIVITY
+            activity = "Registry Activity"
         return NormalizedEvent(
             class_uid=class_uid,
             activity_name=activity,
@@ -103,6 +135,179 @@ class LogNormalizationEngine:
             protocol=record.get("Protocol") or record.get("protocol"),
             registry_key=record.get("TargetObject") or record.get("registry_key"),
             source_type="sysmon",
+            raw_data=serialize_raw_data(record),
+            raw=record,
+        )
+
+    def _parse_windows_security(self, record: dict[str, Any]) -> NormalizedEvent:
+        event_id = int(record.get("EventID") or record.get("event_id") or 0)
+        class_uid = OCSFClass.DETECTION_FINDING
+        activity = f"Windows Security Event {event_id}"
+        if event_id in {4624, 4625}:
+            class_uid = OCSFClass.AUTHENTICATION
+            activity = "Logon Success" if event_id == 4624 else "Logon Failed"
+        elif event_id == 4688:
+            class_uid = OCSFClass.PROCESS_ACTIVITY
+            activity = "Process Creation"
+
+        return NormalizedEvent(
+            class_uid=class_uid,
+            activity_name=activity,
+            timestamp=self._parse_ts(record),
+            host=record.get("Computer") or record.get("host"),
+            user=record.get("TargetUserName") or record.get("SubjectUserName") or record.get("user"),
+            process_name=record.get("NewProcessName") or record.get("process_name"),
+            process_pid=self._int_or_none(record.get("NewProcessId") or record.get("pid")),
+            parent_process_name=record.get("ParentProcessName"),
+            parent_process_pid=self._int_or_none(record.get("CreatorProcessId")),
+            src_ip=record.get("IpAddress") or record.get("src_ip"),
+            src_port=self._int_or_none(record.get("IpPort") or record.get("src_port")),
+            auth_id=record.get("TargetLogonId") or record.get("LogonId"),
+            source_type="windows_security",
+            raw_data=serialize_raw_data(record),
+            raw=record,
+        )
+
+    def _parse_auditd(self, record: dict[str, Any]) -> NormalizedEvent:
+        return NormalizedEvent(
+            class_uid=OCSFClass.PROCESS_ACTIVITY,
+            activity_name="Linux Auditd Event",
+            timestamp=self._parse_ts(record),
+            host=record.get("host") or record.get("node"),
+            user=record.get("auid") or record.get("uid"),
+            process_name=record.get("exe") or record.get("comm"),
+            process_pid=self._int_or_none(record.get("pid")),
+            parent_process_pid=self._int_or_none(record.get("ppid")),
+            file_path=record.get("path") or record.get("name"),
+            source_type="auditd",
+            raw_data=serialize_raw_data(record),
+            raw=record,
+        )
+
+    def _parse_macos_unified(self, record: dict[str, Any]) -> NormalizedEvent:
+        return NormalizedEvent(
+            class_uid=OCSFClass.DETECTION_FINDING,
+            activity_name=record.get("eventMessage") or "macOS Unified Log",
+            timestamp=self._parse_ts(record),
+            host=record.get("hostname"),
+            process_name=record.get("processImagePath") or record.get("processImageUUID"),
+            process_pid=self._int_or_none(record.get("pid")),
+            source_type="macos_unified",
+            raw_data=serialize_raw_data(record),
+            raw=record,
+        )
+
+    def _parse_android_log(self, record: dict[str, Any]) -> NormalizedEvent:
+        return NormalizedEvent(
+            class_uid=OCSFClass.DETECTION_FINDING,
+            activity_name=record.get("message") or "Android System Log",
+            timestamp=self._parse_ts(record),
+            host=record.get("device") or "android_device",
+            process_name=record.get("tag"),
+            process_pid=self._int_or_none(record.get("pid")),
+            source_type="android_log",
+            raw_data=serialize_raw_data(record),
+            raw=record,
+        )
+
+    def _parse_zeek(self, record: dict[str, Any]) -> NormalizedEvent:
+        path = record.get("_path")
+        class_uid = OCSFClass.NETWORK_ACTIVITY
+        activity = "Zeek Network Connection"
+        domain = None
+        if path == "http":
+            class_uid = OCSFClass.HTTP_ACTIVITY
+            activity = "Zeek HTTP Request"
+            domain = record.get("host")
+        elif path == "dns":
+            class_uid = OCSFClass.DNS_ACTIVITY
+            activity = "Zeek DNS Query"
+            domain = record.get("query")
+        return NormalizedEvent(
+            class_uid=class_uid,
+            activity_name=activity,
+            timestamp=self._parse_ts(record),
+            src_ip=record.get("id.orig_h") or record.get("src_ip"),
+            src_port=self._int_or_none(record.get("id.orig_p") or record.get("src_port")),
+            dst_ip=record.get("id.resp_h") or record.get("dst_ip"),
+            dst_port=self._int_or_none(record.get("id.resp_p") or record.get("dst_port")),
+            protocol=record.get("proto") or record.get("protocol"),
+            domain=domain,
+            session_id=record.get("uid"),
+            source_type="zeek",
+            raw_data=serialize_raw_data(record),
+            raw=record,
+        )
+
+    def _parse_web_server(self, record: dict[str, Any]) -> NormalizedEvent:
+        return NormalizedEvent(
+            class_uid=OCSFClass.HTTP_ACTIVITY,
+            activity_name="Web Server Access",
+            timestamp=self._parse_ts(record),
+            src_ip=record.get("clientip") or record.get("remote_addr") or record.get("src_ip"),
+            user=record.get("remote_user") or record.get("user"),
+            domain=record.get("host") or record.get("server_name"),
+            source_type="web_server",
+            raw_data=serialize_raw_data(record),
+            raw=record,
+        )
+
+    def _parse_firewall(self, record: dict[str, Any]) -> NormalizedEvent:
+        return NormalizedEvent(
+            class_uid=OCSFClass.NETWORK_ACTIVITY,
+            activity_name=f"Firewall Action: {record.get('action', 'unknown')}",
+            timestamp=self._parse_ts(record),
+            src_ip=record.get("src_ip") or record.get("source_ip"),
+            src_port=self._int_or_none(record.get("src_port") or record.get("source_port")),
+            dst_ip=record.get("dst_ip") or record.get("destination_ip"),
+            dst_port=self._int_or_none(record.get("dst_port") or record.get("destination_port")),
+            protocol=record.get("protocol") or record.get("proto"),
+            source_type="firewall",
+            raw_data=serialize_raw_data(record),
+            raw=record,
+        )
+
+    def _parse_wazuh(self, record: dict[str, Any]) -> NormalizedEvent:
+        rule = record.get("rule", {})
+        agent = record.get("agent", {})
+        data = record.get("data", {})
+        return NormalizedEvent(
+            class_uid=OCSFClass.DETECTION_FINDING,
+            activity_name=rule.get("description") or "Wazuh Alert",
+            timestamp=self._parse_ts(record),
+            host=agent.get("name") or record.get("location"),
+            user=data.get("srcuser") or data.get("dstuser") or data.get("user"),
+            src_ip=data.get("srcip") or record.get("srcip"),
+            dst_ip=data.get("dstip"),
+            process_name=data.get("process") or data.get("program"),
+            source_type="wazuh",
+            raw_data=serialize_raw_data(record),
+            raw=record,
+        )
+
+    def _parse_splunk(self, record: dict[str, Any]) -> NormalizedEvent:
+        return NormalizedEvent(
+            class_uid=OCSFClass.DETECTION_FINDING,
+            activity_name=record.get("action") or record.get("message") or "Splunk Event",
+            timestamp=self._parse_ts(record),
+            host=record.get("host") or record.get("dest"),
+            user=record.get("user") or record.get("src_user"),
+            process_name=record.get("process") or record.get("app"),
+            src_ip=record.get("src_ip") or record.get("src"),
+            dst_ip=record.get("dst_ip") or record.get("dest_ip"),
+            source_type="splunk",
+            raw_data=serialize_raw_data(record),
+            raw=record,
+        )
+
+    def _parse_azure_activity(self, record: dict[str, Any]) -> NormalizedEvent:
+        return NormalizedEvent(
+            class_uid=OCSFClass.AUTHENTICATION,
+            activity_name=record.get("operationName") or "Azure Activity",
+            timestamp=self._parse_ts(record),
+            user=record.get("caller") or record.get("identity", {}).get("claims", {}).get("upn"),
+            src_ip=record.get("callerIpAddress") or record.get("clientIpAddress"),
+            source_type="azure_activity",
             raw_data=serialize_raw_data(record),
             raw=record,
         )

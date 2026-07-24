@@ -482,7 +482,7 @@ class DuckDBCorrelationStore:
         """Total number of events across all tables."""
         total = 0
         for table in ("processes", "network", "auth", "files", "registry", "events"):
-            count = self.conn.execute(f"SELECT COUNT(*) FROM {table}").fetchone()[0]
+            count = self.conn.execute(f"SELECT COUNT(*) FROM {table}").fetchone()[0]  # nosec B608
             total += int(count)
         return total
 

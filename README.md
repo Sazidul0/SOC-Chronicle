@@ -1,5 +1,16 @@
 # soc-chronicle
 
+[![PyPI version](https://img.shields.io/pypi/v/soc-chronicle.svg)](https://pypi.org/project/soc-chronicle/)
+[![Python versions](https://img.shields.io/pypi/pyversions/soc-chronicle.svg)](https://pypi.org/project/soc-chronicle/)
+[![License](https://img.shields.io/github/license/soc-chronicle/soc-chronicle.svg)](https://github.com/soc-chronicle/soc-chronicle/blob/main/LICENSE)
+[![Build Status](https://github.com/soc-chronicle/soc-chronicle/actions/workflows/ci.yml/badge.svg)](https://github.com/soc-chronicle/soc-chronicle/actions)
+[![Code Style: Ruff](https://img.shields.io/badge/code%20style-ruff-000000.svg)](https://github.com/astral-sh/ruff)
+[![Platform](https://img.shields.io/badge/platform-linux%20%7C%20macos%20%7C%20windows-lightgrey)](https://github.com/soc-chronicle/soc-chronicle)
+[![GitHub Stars](https://img.shields.io/github/stars/soc-chronicle/soc-chronicle.svg)](https://github.com/soc-chronicle/soc-chronicle/stargazers)
+[![GitHub Forks](https://img.shields.io/github/forks/soc-chronicle/soc-chronicle.svg)](https://github.com/soc-chronicle/soc-chronicle/network/members)
+[![GitHub Issues](https://img.shields.io/github/issues/soc-chronicle/soc-chronicle.svg)](https://github.com/soc-chronicle/soc-chronicle/issues)
+[![Downloads](https://img.shields.io/pypi/dm/soc-chronicle.svg)](https://pypi.org/project/soc-chronicle/)
+
 Open-source **Attack Investigation & Incident Narrative Engine** — transforms raw cybersecurity alerts into complete, evidence-driven attack narratives.
 
 ## Vision

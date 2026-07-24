@@ -15,6 +15,8 @@ from soc_chronicle.models.ocsf.enums import (
     OCSFClass,
     SeverityId,
     StatusId,
+    activity_name_for,
+    compute_type_uid,
 )
 from soc_chronicle.models.ocsf.objects import (
     Actor,
@@ -69,11 +71,19 @@ class BaseOCSFEvent(BaseModel):
         return parsed
 
     @model_validator(mode="after")
-    def infer_category(self) -> BaseOCSFEvent:
+    def infer_category_and_type_uid(self) -> BaseOCSFEvent:
         if self.category_uid is None:
             inferred = CLASS_TO_CATEGORY.get(int(self.class_uid))
             if inferred is not None:
                 object.__setattr__(self, "category_uid", inferred)
+        if self.type_uid is None:
+            object.__setattr__(
+                self,
+                "type_uid",
+                compute_type_uid(self.class_uid, self.activity_id),
+            )
+        if self.activity_name == "Unknown" and self.activity_id != ActivityId.UNKNOWN:
+            object.__setattr__(self, "activity_name", activity_name_for(self.activity_id))
         return self
 
 
@@ -134,6 +144,25 @@ class DetectionFindingEvent(BaseOCSFEvent):
     confidence_id: int | None = None
 
 
+class RegistryValueActivityEvent(BaseOCSFEvent):
+    """OCSF Registry Value Activity (class_uid=201002)."""
+
+    class_uid: Literal[OCSFClass.REGISTRY_VALUE_ACTIVITY] = OCSFClass.REGISTRY_VALUE_ACTIVITY
+    reg_key: str | None = None
+    reg_value: str | None = None
+    process: Process | None = None
+
+
+class HTTPActivityEvent(BaseOCSFEvent):
+    """OCSF HTTP Activity (class_uid=4002)."""
+
+    class_uid: Literal[OCSFClass.HTTP_ACTIVITY] = OCSFClass.HTTP_ACTIVITY
+    http_request: str | None = None
+    http_response: str | None = None
+    url: str | None = None
+    connection_info: NetworkConnection | None = None
+
+
 class ScheduledJobActivityEvent(BaseOCSFEvent):
     """OCSF Scheduled Job Activity (class_uid=1006)."""
 
@@ -148,7 +177,9 @@ OCSFEvent = (
     | NetworkActivityEvent
     | AuthenticationEvent
     | RegistryKeyActivityEvent
+    | RegistryValueActivityEvent
     | DNSActivityEvent
+    | HTTPActivityEvent
     | DetectionFindingEvent
     | ScheduledJobActivityEvent
 )
@@ -160,7 +191,9 @@ EVENT_CLASS_REGISTRY: dict[OCSFClass, type[BaseOCSFEvent]] = {
     OCSFClass.NETWORK_ACTIVITY: NetworkActivityEvent,
     OCSFClass.AUTHENTICATION: AuthenticationEvent,
     OCSFClass.REGISTRY_KEY_ACTIVITY: RegistryKeyActivityEvent,
+    OCSFClass.REGISTRY_VALUE_ACTIVITY: RegistryValueActivityEvent,
     OCSFClass.DNS_ACTIVITY: DNSActivityEvent,
+    OCSFClass.HTTP_ACTIVITY: HTTPActivityEvent,
     OCSFClass.DETECTION_FINDING: DetectionFindingEvent,
     OCSFClass.SCHEDULED_JOB_ACTIVITY: ScheduledJobActivityEvent,
 }

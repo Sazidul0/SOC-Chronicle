@@ -1,11 +1,15 @@
 """Open Cybersecurity Schema Framework (OCSF) Pydantic models."""
 
+from soc_chronicle.models.ocsf.context import NormalizationContext
 from soc_chronicle.models.ocsf.enums import (
     ActivityId,
     CategoryUid,
     OCSFClass,
     SeverityId,
+    SourceType,
     StatusId,
+    activity_name_for,
+    compute_type_uid,
 )
 from soc_chronicle.models.ocsf.events import (
     AuthenticationEvent,
@@ -13,11 +17,14 @@ from soc_chronicle.models.ocsf.events import (
     DetectionFindingEvent,
     DNSActivityEvent,
     FileActivityEvent,
+    HTTPActivityEvent,
     NetworkActivityEvent,
     OCSFEvent,
     ProcessActivityEvent,
     RegistryKeyActivityEvent,
+    RegistryValueActivityEvent,
     ScheduledJobActivityEvent,
+    build_typed_event,
 )
 from soc_chronicle.models.ocsf.objects import (
     Actor,
@@ -31,12 +38,17 @@ from soc_chronicle.models.ocsf.objects import (
     User,
 )
 from soc_chronicle.models.ocsf.validators import (
+    coerce_domain,
     coerce_int,
+    coerce_ip,
     coerce_ipv4,
+    coerce_md5,
     coerce_port,
+    coerce_sha1,
     coerce_sha256,
     coerce_utc_datetime,
     safe_model_construct,
+    serialize_raw_data,
 )
 
 __all__ = [
@@ -51,23 +63,35 @@ __all__ = [
     "File",
     "FileActivityEvent",
     "Fingerprint",
+    "HTTPActivityEvent",
     "Metadata",
     "NetworkActivityEvent",
     "NetworkConnection",
     "NetworkEndpoint",
+    "NormalizationContext",
     "OCSFClass",
     "OCSFEvent",
     "Process",
     "ProcessActivityEvent",
     "RegistryKeyActivityEvent",
+    "RegistryValueActivityEvent",
     "ScheduledJobActivityEvent",
     "SeverityId",
+    "SourceType",
     "StatusId",
     "User",
+    "activity_name_for",
+    "build_typed_event",
+    "coerce_domain",
     "coerce_int",
+    "coerce_ip",
     "coerce_ipv4",
+    "coerce_md5",
     "coerce_port",
+    "coerce_sha1",
     "coerce_sha256",
     "coerce_utc_datetime",
+    "compute_type_uid",
     "safe_model_construct",
+    "serialize_raw_data",
 ]

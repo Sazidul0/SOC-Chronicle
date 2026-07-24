@@ -35,12 +35,15 @@ dependencies = [
 
 [project.optional-dependencies]
 dev = [
+    "bandit[toml]>=1.7",
     "mkdocs-material>=9.6",
     "mypy>=1.14",
+    "pre-commit>=3.7",
     "pytest>=8.3",
     "pytest-asyncio>=0.25",
     "pytest-cov>=6.0",
     "ruff>=0.9",
+    "safety>=3.2",
 ]
 analytics = ["duckdb>=1.1"]
 ai = ["httpx>=0.28.0"]

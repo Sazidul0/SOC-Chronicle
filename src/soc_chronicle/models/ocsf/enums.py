@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from enum import IntEnum
+from enum import IntEnum, StrEnum
 
 
 class OCSFClass(IntEnum):
@@ -94,6 +94,46 @@ class StatusId(IntEnum):
     OTHER = 99
 
 
+class SourceType(StrEnum):
+    """Known log source identifiers for normalized events."""
+
+    UNKNOWN = "unknown"
+    SYSMON = "sysmon"
+    WINDOWS_SECURITY = "windows_security"
+    LINUX_AUDITD = "linux_auditd"
+    LINUX_SYSMON = "linux_sysmon"
+    MACOS_UNIFIED = "macos_unified"
+    ANDROID = "android"
+    ZEEK = "zeek"
+    SURICATA = "suricata"
+    SNORT = "snort"
+    APACHE = "apache"
+    NGINX = "nginx"
+    FIREWALL = "firewall"
+    CLOUDTRAIL = "cloudtrail"
+    AZURE_ACTIVITY = "azure_activity"
+    OKTA = "okta"
+    ENTRA_ID = "entra_id"
+    WAZUH = "wazuh"
+    SPLUNK = "splunk"
+    CROWDSTRIKE = "crowdstrike"
+    ELASTIC_ECS = "elastic_ecs"
+    GENERIC = "generic"
+
+
+def compute_type_uid(class_uid: OCSFClass | int, activity_id: ActivityId | int) -> int:
+    """Compute OCSF type_uid as ``class_uid * 100 + activity_id``.
+
+    OCSF encodes the activity within the class namespace using this formula.
+    """
+    return int(class_uid) * 100 + int(activity_id)
+
+
+def activity_name_for(activity_id: ActivityId) -> str:
+    """Return a human-readable activity name for a given activity_id."""
+    return activity_id.name.replace("_", " ").title()
+
+
 # Mapping from class_uid to category_uid for validation and type construction.
 CLASS_TO_CATEGORY: dict[int, CategoryUid] = {
     OCSFClass.FILE_ACTIVITY: CategoryUid.SYSTEM_ACTIVITY,
@@ -108,4 +148,14 @@ CLASS_TO_CATEGORY: dict[int, CategoryUid] = {
     OCSFClass.DNS_ACTIVITY: CategoryUid.NETWORK_ACTIVITY,
     OCSFClass.DETECTION_FINDING: CategoryUid.FINDINGS,
     OCSFClass.INCIDENT_FINDING: CategoryUid.FINDINGS,
+    OCSFClass.VULNERABILITY_FINDING: CategoryUid.FINDINGS,
+    OCSFClass.KERNEL_ACTIVITY: CategoryUid.SYSTEM_ACTIVITY,
+    OCSFClass.MODULE_ACTIVITY: CategoryUid.SYSTEM_ACTIVITY,
+    OCSFClass.MEMORY_ACTIVITY: CategoryUid.SYSTEM_ACTIVITY,
+    OCSFClass.SMB_ACTIVITY: CategoryUid.NETWORK_ACTIVITY,
+    OCSFClass.DHCP_ACTIVITY: CategoryUid.NETWORK_ACTIVITY,
+    OCSFClass.RDP_ACTIVITY: CategoryUid.NETWORK_ACTIVITY,
+    OCSFClass.SSH_ACTIVITY: CategoryUid.NETWORK_ACTIVITY,
+    OCSFClass.AUTHORIZE_SESSION: CategoryUid.IDENTITY_ACCESS,
+    OCSFClass.USER_ACCESS: CategoryUid.IDENTITY_ACCESS,
 }
