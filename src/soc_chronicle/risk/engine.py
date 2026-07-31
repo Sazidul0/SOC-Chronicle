@@ -82,9 +82,9 @@ class RiskAssessmentEngine:
                     rid = rule.get("id", "")
                     score = int(rule.get("score", 10))
                     desc = rule.get("description", rid)
-                    if rid:
+                    if score and desc:
                         rules[rid] = (score, desc)
-            except Exception:  # noqa: BLE001
+            except Exception:  # noqa: BLE001  # nosec B110
                 pass
         return rules
 

@@ -53,8 +53,9 @@ class FileWatchConnector(IngestConnector):
                                 if line:
                                     self.queue.put_nowait(line)
                             self.positions[path] = f.tell()
-                    except Exception:
-                        pass
+                    except Exception as e:
+                        import logging
+                        logging.getLogger(__name__).debug("Failed to read watched file: %s", e)
                         
             self.observer = Observer()
             handler = Handler(self.queue, asyncio.get_running_loop())

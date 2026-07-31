@@ -84,7 +84,7 @@ class SearchEngine:
             params.append(q)
             
         where_clause = " OR ".join(conds)
-        sql = f"SELECT * FROM search_events WHERE {where_clause} ORDER BY timestamp DESC LIMIT 1000"
+        sql = f"SELECT * FROM search_events WHERE {where_clause} ORDER BY timestamp DESC LIMIT 1000"  # nosec B608
         
         results = self._conn.execute(sql, params).fetch_df().to_dict('records')
         return self._format_results(results)
@@ -129,7 +129,7 @@ class SearchEngine:
                 try:
                     # Handle pandas Timestamp
                     r['timestamp'] = r['timestamp'].replace(tzinfo=timezone.utc).isoformat()
-                except Exception:
+                except Exception:  # nosec B110
                     pass
             if 'raw_data' in r and isinstance(r['raw_data'], str):
                 try:

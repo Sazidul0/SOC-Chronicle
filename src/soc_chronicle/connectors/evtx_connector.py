@@ -62,8 +62,9 @@ class EvtxConnector(IngestConnector):
                                 elif isinstance(event_data, dict) and "@Name" in event_data and "#text" in event_data:
                                      flat_record[event_data["@Name"]] = event_data["#text"]
                             records.append(flat_record)
-                    except Exception:
-                        pass
+                    except Exception as e:
+                        import logging
+                        logging.getLogger(__name__).debug("Failed to parse evtx record: %s", e)
             return records
             
         records = await asyncio.to_thread(parse_file)

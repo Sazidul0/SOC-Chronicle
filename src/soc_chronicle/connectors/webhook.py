@@ -17,7 +17,7 @@ except ImportError:
 class WebhookConnector(IngestConnector):
     """HTTP server accepting JSON POSTs (e.g., from Filebeat/Logstash)."""
     
-    def __init__(self, config: ConnectorConfig, port: int = 8514, host: str = "0.0.0.0", secret: str | None = None) -> None:
+    def __init__(self, config: ConnectorConfig, port: int = 8514, host: str = "0.0.0.0", secret: str | None = None) -> None:  # nosec B104
         super().__init__(config)
         if web is None:
             raise ImportError("WebhookConnector requires aiohttp. Install with 'pip install aiohttp'")

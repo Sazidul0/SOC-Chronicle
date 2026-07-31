@@ -1,12 +1,32 @@
-# SOC-Chronicle
+<p align="center">
+  <img src="https://github.com/Sazidul0/SOC-Chronicle/raw/main/soc-chronicle-lockup.svg" alt="soc-chronicle banner" width="600"/>
+</p>
 
-Professional SOC Investigation, Threat Hunting, and Incident Narrative Engine.
+<p align="center">
+  <a href="https://pypi.org/project/soc-chronicle/"><img src="https://img.shields.io/pypi/v/soc-chronicle.svg?color=blue" alt="PyPI version"></a>
+  <a href="https://pypi.org/project/soc-chronicle/"><img src="https://img.shields.io/pypi/pyversions/soc-chronicle.svg" alt="Python versions"></a>
+  <a href="https://github.com/Sazidul0/SOC-Chronicle/actions"><img src="https://github.com/Sazidul0/SOC-Chronicle/actions/workflows/ci.yml/badge.svg" alt="Build Status"></a>
+  <a href="https://github.com/Sazidul0/SOC-Chronicle/blob/main/LICENSE"><img src="https://img.shields.io/github/license/Sazidul0/SOC-Chronicle.svg" alt="License"></a>
+  <a href="https://github.com/Sazidul0/SOC-Chronicle/stargazers"><img src="https://img.shields.io/github/stars/Sazidul0/SOC-Chronicle.svg" alt="GitHub Stars"></a>
+  <a href="https://github.com/Sazidul0/SOC-Chronicle/issues"><img src="https://img.shields.io/github/issues/Sazidul0/SOC-Chronicle.svg" alt="GitHub Issues"></a>
+</p>
 
-SOC-Chronicle is an open-source security engineering project designed to automatically correlate raw logs from disparate security tools, normalize them into a unified schema, and generate actionable investigation reports.
+<p align="center">
+  Open-source <strong>Professional Attack Investigation & Incident Narrative Engine</strong> — transforms raw cybersecurity alerts into complete, evidence-driven attack narratives.
+</p>
 
-## Key Capabilities
+## Vision
 
-- **Unified Log Normalization**: Maps logs from Sysmon, Microsoft Sentinel, Okta, PAN-OS, CEF, Zeek, Windows Security, and more into an OCSF-aligned schema.
+SOC-Chronicle sits between existing detection platforms (SIEM, EDR, XDR, Cloud Security, IDS/IPS) and incident response workflows. Unlike traditional SIEMs that collect and search logs, SOC-Chronicle focuses on:
+
+- **Investigation automation** — correlate events, build attack graphs, reconstruct timelines
+- **Evidence correlation** — every conclusion traces back to supporting evidence
+- **Root cause analysis** — patient zero, initial compromise, blast radius
+- **Deterministic analysis** — explainable outputs, no black-box scoring
+
+## Key Capabilities (v0.2.0)
+
+- **Unified Log Normalization**: Maps logs from Sysmon, Microsoft Sentinel, Okta, PAN-OS, CEF, Zeek, Windows Security, and more into an OCSF-aligned schema with large file stream support.
 - **Automated Correlation**: Links events temporally and directionally using an in-memory or DuckDB-powered correlation engine.
 - **MITRE ATT&CK Mapping**: High-fidelity detection of over 70+ techniques including LOLBin abuse, credential access tools, network C2, and lateral movement.
 - **Threat Intelligence**: Built-in free enrichment from VirusTotal, Shodan InternetDB, IP-API, AlienVault OTX, and GreyNoise.
@@ -17,13 +37,16 @@ SOC-Chronicle is an open-source security engineering project designed to automat
 ## Installation
 
 ```bash
+# Install from PyPI
 pip install soc-chronicle
 ```
 
-Install with all optional connectors and PDF export capability:
+Install with optional live ingest connectors and PDF export capability:
 ```bash
 pip install soc-chronicle[all]
 ```
+
+Or pick specific dependencies: `[evtx]`, `[watch]`, `[serve]`, `[pdf]`.
 
 ## Quick Start
 
@@ -75,11 +98,67 @@ Search the normalized event database (DuckDB) quickly:
 chronicle search --query "powershell.exe" --field process
 ```
 
+## Python API
+
+```python
+from soc_chronicle import InvestigationEngine
+
+engine = InvestigationEngine()
+report = engine.investigate(
+    alert="examples/alert.json",
+    logs="./examples/logs",
+)
+
+print(report.summary)
+print(report.narrative)
+print(f"Risk: {report.risk.total_score}/100")
+print(f"Patient zero: {report.patient_zero}")
+```
+
+## Architecture
+
+```
+Security Alert → Alert Intake → IOC Extraction + Log Normalization (OCSF)
+                                      ↓
+                              Correlation Engine (DuckDB)
+                                      ↓
+              Attack Graph ← Timeline Engine → Risk Engine
+                                      ↓
+                        Incident Narrative Generator
+                                      ↓
+                    Interactive HTML / JSON / Markdown Reports
+```
+
+## Configuration
+
+Create `chronicle.yaml`:
+
+```yaml
+log_level: INFO
+correlation_window_seconds: 3600
+threat_intel:
+  virustotal:
+    enabled: true
+    api_key: "${VT_API_KEY}"
+```
+
+## Plugin Development
+
+Register plugins via entry points in `pyproject.toml`:
+
+```toml
+[project.entry-points."soc_chronicle.plugins"]
+my_parser = "my_package:MyLogParser"
+```
+
+Implement `LogParserPlugin`, `EnrichmentProviderPlugin`, or `ExporterPlugin` from `soc_chronicle.plugins.registry`.
+
 ## Development
 
-Set up a local development environment:
-
 ```bash
-hatch shell
-pytest tests/
+pip install -e ".[dev,all]"
+pytest
+ruff check src tests
+mypy src/soc_chronicle
+mkdocs serve
 ```

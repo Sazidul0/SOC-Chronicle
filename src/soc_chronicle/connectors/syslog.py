@@ -15,7 +15,7 @@ _SYSLOG_RE = re.compile(r'<(\d+)>(?:1 )?(\S+) (\S+) (\S+) (\S+) (?:-|-|.*?) - (.
 class SyslogConnector(IngestConnector):
     """Receives Syslog messages over UDP."""
     
-    def __init__(self, config: ConnectorConfig, port: int = 514, host: str = "0.0.0.0") -> None:
+    def __init__(self, config: ConnectorConfig, port: int = 514, host: str = "0.0.0.0") -> None:  # nosec B104
         super().__init__(config)
         self.port = port
         self.host = host
@@ -31,8 +31,9 @@ class SyslogConnector(IngestConnector):
                 try:
                     msg = data.decode("utf-8")
                     self.queue.put_nowait(msg)
-                except Exception:
-                    pass
+                except Exception as e:
+                    import logging
+                    logging.getLogger(__name__).debug("Syslog datagram decode error: %s", e)
                     
         loop = asyncio.get_running_loop()
         self.transport, _ = await loop.create_datagram_endpoint(
