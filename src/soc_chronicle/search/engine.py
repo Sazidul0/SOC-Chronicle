@@ -84,7 +84,7 @@ class SearchEngine:
             params.append(q)
             
         where_clause = " OR ".join(conds)
-        sql = f"SELECT * FROM search_events WHERE {where_clause} ORDER BY timestamp DESC LIMIT 1000"  # nosec B608
+        sql = f"SELECT * FROM search_events WHERE {where_clause} ORDER BY timestamp DESC LIMIT 1000"
         
         results = self._conn.execute(sql, params).fetch_df().to_dict('records')
         return self._format_results(results)

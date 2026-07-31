@@ -46,7 +46,7 @@ class HuntingGenerator:
             "splunk_spl": f'index=main ({splunk}) | stats count by host, user, Image',
             "elastic_kql": f"event.category : process and ({elastic_kql})",
             "sentinel_kql": f"DeviceProcessEvents | where {sentinel_kql}",
-            "wazuh": f"SELECT * FROM syscheck WHERE {wazuh}" if hashes else "",  # nosec B608
+            "wazuh": f"SELECT * FROM syscheck WHERE {wazuh}" if hashes else "",
             "observed_ips": ips,
             "observed_domains": domains,
         }

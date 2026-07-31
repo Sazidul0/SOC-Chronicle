@@ -29,7 +29,8 @@ class WebhookConnector(IngestConnector):
         self.site: web.TCPSite | None = None
         
     async def connect(self) -> None:
-        assert web is not None
+        if web is None:
+            raise RuntimeError("aiohttp is required for webhook connector")
         app = web.Application()
         app.router.add_post("/ingest", self.handle_ingest)
         

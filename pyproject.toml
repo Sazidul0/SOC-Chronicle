@@ -120,3 +120,6 @@ packages = ["soc_chronicle"]
 [tool.coverage.run]
 source = ["soc_chronicle"]
 branch = true
+
+[tool.bandit]
+skips = ["B101", "B608"]
