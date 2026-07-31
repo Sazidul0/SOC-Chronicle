@@ -182,7 +182,7 @@ def case_list(
 ) -> None:
     """List cases."""
     from soc_chronicle.cases.manager import CaseManager
-    from soc_chronicle.cases.models import CaseStatus, CasePriority
+    from soc_chronicle.cases.models import CasePriority, CaseStatus
     
     manager = CaseManager("chronicle.duckdb")
     s = CaseStatus(status) if status else None
@@ -274,6 +274,7 @@ def search(
 def ingest_evtx(file_path: str) -> None:
     """Parse EVTX to normalized events."""
     import asyncio
+
     from soc_chronicle.connectors.base import ConnectorConfig
     from soc_chronicle.connectors.evtx_connector import EvtxConnector
     
@@ -293,6 +294,7 @@ def ingest_evtx(file_path: str) -> None:
 def ingest_watch(directory: str) -> None:
     """Live watch directory for logs."""
     import asyncio
+
     from soc_chronicle.connectors.base import ConnectorConfig
     from soc_chronicle.connectors.filewatch import FileWatchConnector
     
@@ -309,6 +311,7 @@ def ingest_watch(directory: str) -> None:
 def ingest_syslog(port: int = typer.Option(514, "--port")) -> None:
     """Start syslog receiver."""
     import asyncio
+
     from soc_chronicle.connectors.base import ConnectorConfig
     from soc_chronicle.connectors.syslog import SyslogConnector
     
@@ -325,6 +328,7 @@ def ingest_syslog(port: int = typer.Option(514, "--port")) -> None:
 def serve(port: int = typer.Option(8514, "--port")) -> None:
     """Start webhook receiver."""
     import asyncio
+
     from soc_chronicle.connectors.base import ConnectorConfig
     from soc_chronicle.connectors.webhook import WebhookConnector
     

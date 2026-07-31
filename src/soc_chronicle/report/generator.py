@@ -175,7 +175,7 @@ class ReportGenerator:
         for entry in report.timeline.sorted_entries():
             phase = entry.phase or "activity"
             color = phase_colors.get(phase, "#6b7280")
-            ts = entry.timestamp.strftime("%H:%M:%S")
+            entry.timestamp.strftime("%H:%M:%S")
             timeline_rows += f"""
             <tr>
                 <td class="ts">{entry.timestamp.strftime("%Y-%m-%d %H:%M:%S")}</td>
@@ -256,8 +256,7 @@ class ReportGenerator:
             </div>"""
 
         # Risk gauge SVG
-        gauge_angle = int((report.risk.total_score / 100) * 180)
-        gauge_color = severity_color
+        int((report.risk.total_score / 100) * 180)
 
         return f"""<!DOCTYPE html>
 <html lang="en">

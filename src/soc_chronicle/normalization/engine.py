@@ -512,7 +512,7 @@ class LogNormalizationEngine:
         """Parse Okta System Log events."""
         actor = record.get("actor") or {}
         client = record.get("client") or {}
-        outcome = record.get("outcome") or {}
+        record.get("outcome") or {}
         geo = client.get("geographicalContext") or {}
         return NormalizedEvent(
             class_uid=OCSFClass.AUTHENTICATION,

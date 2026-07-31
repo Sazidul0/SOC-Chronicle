@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import json
 from typing import Any
 
 from soc_chronicle.models.event import NormalizedEvent, OCSFClass
@@ -186,13 +185,7 @@ class MitreMapper:
                     self._add(mappings, seen, (tid, name, tactic), event, event.activity_name)
 
             # Authentication lateral movement
-            elif event.class_uid == OCSFClass.AUTHENTICATION:
-                if event.class_uid in self.ACTIVITY_MAP:
-                    tid, name, tactic = self.ACTIVITY_MAP[event.class_uid]
-                    self._add(mappings, seen, (tid, name, tactic), event, event.activity_name)
-
-            # File activity
-            elif event.class_uid == OCSFClass.FILE_ACTIVITY:
+            elif event.class_uid == OCSFClass.AUTHENTICATION or event.class_uid == OCSFClass.FILE_ACTIVITY:
                 if event.class_uid in self.ACTIVITY_MAP:
                     tid, name, tactic = self.ACTIVITY_MAP[event.class_uid]
                     self._add(mappings, seen, (tid, name, tactic), event, event.activity_name)

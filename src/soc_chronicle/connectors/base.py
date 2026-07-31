@@ -7,6 +7,7 @@ from collections.abc import AsyncGenerator
 from dataclasses import dataclass
 from typing import Any
 
+
 @dataclass
 class ConnectorConfig:
     source_name: str

@@ -3,10 +3,10 @@
 from __future__ import annotations
 
 import json
-from datetime import datetime, timezone
+from datetime import UTC
 from typing import Any
 
-from soc_chronicle.models.event import NormalizedEvent, OCSFClass
+from soc_chronicle.models.event import NormalizedEvent
 
 try:
     import duckdb
@@ -126,16 +126,13 @@ class SearchEngine:
         # Clean up Pandas/DuckDB output for JSON serialization
         for r in df_records:
             if 'timestamp' in r and r['timestamp']:
-                try:
+                import contextlib
+                with contextlib.suppress(Exception):
                     # Handle pandas Timestamp
-                    r['timestamp'] = r['timestamp'].replace(tzinfo=timezone.utc).isoformat()
-                except Exception:  # nosec B110
-                    pass
+                    r['timestamp'] = r['timestamp'].replace(tzinfo=UTC).isoformat()
             if 'raw_data' in r and isinstance(r['raw_data'], str):
-                try:
+                with contextlib.suppress(json.JSONDecodeError):
                     r['raw_data'] = json.loads(r['raw_data'])
-                except json.JSONDecodeError:
-                    pass
         return df_records
 
     def close(self) -> None:

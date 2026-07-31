@@ -3,11 +3,10 @@
 from __future__ import annotations
 
 import json
-from datetime import datetime, timezone
-from pathlib import Path
+from datetime import UTC, datetime
 from typing import Any
 
-from soc_chronicle.cases.models import Case, CaseArtifact, CaseNote, CasePriority, CaseStatus, TLP
+from soc_chronicle.cases.models import TLP, Case, CaseArtifact, CaseNote, CasePriority, CaseStatus
 
 try:
     import duckdb
@@ -103,17 +102,17 @@ class CaseStore:
         
         c = Case(
             id=result[0], title=result[1], status=CaseStatus(result[2]), priority=CasePriority(result[3]),
-            alert_id=result[4], report_id=result[5], created_at=result[6].replace(tzinfo=timezone.utc),
-            updated_at=result[7].replace(tzinfo=timezone.utc), assigned_to=result[8], severity=result[9],
+            alert_id=result[4], report_id=result[5], created_at=result[6].replace(tzinfo=UTC),
+            updated_at=result[7].replace(tzinfo=UTC), assigned_to=result[8], severity=result[9],
             tlp=TLP(result[10]), iocs=self._parse_json(result[11]), affected_assets=self._parse_json(result[12]),
-            resolution_notes=result[13], closed_at=result[14].replace(tzinfo=timezone.utc) if result[14] else None
+            resolution_notes=result[13], closed_at=result[14].replace(tzinfo=UTC) if result[14] else None
         )
         c.notes = self.get_notes(case_id)
         c.artifacts = self.get_artifacts(case_id)
         return c
 
     def update_case(self, case: Case) -> None:
-        case.updated_at = datetime.now(timezone.utc)
+        case.updated_at = datetime.now(UTC)
         self._conn.execute(
             """
             UPDATE cases SET
@@ -177,7 +176,7 @@ class CaseStore:
         results = self._conn.execute("SELECT * FROM case_notes WHERE case_id = ? ORDER BY timestamp ASC", [case_id]).fetchall()
         return [
             CaseNote(
-                id=r[0], case_id=r[1], timestamp=r[2].replace(tzinfo=timezone.utc),
+                id=r[0], case_id=r[1], timestamp=r[2].replace(tzinfo=UTC),
                 author=r[3], content=r[4], evidence_refs=self._parse_json(r[5])
             )
             for r in results
@@ -193,7 +192,7 @@ class CaseStore:
         results = self._conn.execute("SELECT * FROM case_artifacts WHERE case_id = ? ORDER BY timestamp ASC", [case_id]).fetchall()
         return [
             CaseArtifact(
-                id=r[0], case_id=r[1], name=r[2], artifact_type=r[3], path=r[4], hash_value=r[5], timestamp=r[6].replace(tzinfo=timezone.utc)
+                id=r[0], case_id=r[1], name=r[2], artifact_type=r[3], path=r[4], hash_value=r[5], timestamp=r[6].replace(tzinfo=UTC)
             )
             for r in results
         ]

@@ -3,10 +3,10 @@
 from __future__ import annotations
 
 import uuid
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 
-from soc_chronicle.cases.models import Case, CaseArtifact, CaseNote, CasePriority, CaseStatus, TLP
+from soc_chronicle.cases.models import Case, CaseArtifact, CaseNote, CasePriority, CaseStatus
 from soc_chronicle.cases.store import CaseStore
 from soc_chronicle.models.report import InvestigationReport
 
@@ -110,7 +110,7 @@ class CaseManager:
             raise ValueError(f"Case {case_id} not found")
         case.status = CaseStatus.FALSE_POSITIVE if false_positive else CaseStatus.CLOSED
         case.resolution_notes = resolution_notes
-        case.closed_at = datetime.now(timezone.utc)
+        case.closed_at = datetime.now(UTC)
         self.store.update_case(case)
         self.add_note(case_id, f"Case closed. Resolution:\n{resolution_notes}", author=author)
 
