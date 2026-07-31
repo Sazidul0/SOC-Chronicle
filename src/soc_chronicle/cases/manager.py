@@ -5,6 +5,7 @@ from __future__ import annotations
 import uuid
 from datetime import UTC, datetime
 from pathlib import Path
+from typing import Any
 
 from soc_chronicle.cases.models import Case, CaseArtifact, CaseNote, CasePriority, CaseStatus
 from soc_chronicle.cases.store import CaseStore
@@ -14,10 +15,10 @@ from soc_chronicle.models.report import InvestigationReport
 class CaseManager:
     """Manages triage workflow and case lifecycle."""
 
-    def __init__(self, db_path: str = ":memory:") -> None:
+    def __init__(self, db_path: str = "chronicle.duckdb") -> None:
         self.store = CaseStore(db_path)
 
-    def create_case(self, title: str, **kwargs) -> Case:
+    def create_case(self, title: str, **kwargs: Any) -> Case:
         """Create a new case manually."""
         case_id = f"CASE-{uuid.uuid4().hex[:8].upper()}"
         case = Case(id=case_id, title=title, **kwargs)

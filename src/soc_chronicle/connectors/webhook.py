@@ -9,9 +9,9 @@ from typing import Any
 from soc_chronicle.connectors.base import ConnectorConfig, IngestConnector
 
 try:
-    from aiohttp import web
+    from aiohttp import web  # type: ignore
 except ImportError:
-    web = None  # type: ignore
+    web = None
 
 
 class WebhookConnector(IngestConnector):
@@ -25,10 +25,11 @@ class WebhookConnector(IngestConnector):
         self.host = host
         self.secret = secret
         self.queue: asyncio.Queue[dict[str, Any]] = asyncio.Queue()
-        self.runner = None
-        self.site = None
+        self.runner: web.AppRunner | None = None
+        self.site: web.TCPSite | None = None
         
     async def connect(self) -> None:
+        assert web is not None
         app = web.Application()
         app.router.add_post("/ingest", self.handle_ingest)
         

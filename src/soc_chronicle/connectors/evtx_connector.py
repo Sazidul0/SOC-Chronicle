@@ -10,8 +10,8 @@ from typing import Any
 from soc_chronicle.connectors.base import ConnectorConfig, IngestConnector
 
 try:
-    import Evtx.Evtx as evtx
-    import xmltodict
+    import Evtx.Evtx as evtx  # type: ignore
+    import xmltodict  # type: ignore
 except ImportError:
     evtx = None
     xmltodict = None

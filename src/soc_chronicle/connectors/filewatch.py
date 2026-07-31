@@ -25,7 +25,8 @@ class FileWatchConnector(IngestConnector):
         super().__init__(config)
         self.directory = Path(directory)
         self.queue: asyncio.Queue[str] = asyncio.Queue()
-        self.observer = None
+        self.observer: Any | None = None
+        self.positions: dict[str, int] = {}
         
     async def connect(self) -> None:
         if not self.directory.exists() or not self.directory.is_dir():
@@ -38,10 +39,10 @@ class FileWatchConnector(IngestConnector):
                     self.loop = loop
                     self.positions: dict[str, int] = {}
                     
-                def on_modified(self, event: FileSystemEvent) -> None:
-                    if event.is_directory or not event.src_path.endswith((".log", ".jsonl", ".json")):
-                        return
-                    self.loop.call_soon_threadsafe(self.process_file, event.src_path)
+                def on_modified(self, event: Any) -> None:
+                    if not event.is_directory:
+                        if str(event.src_path).endswith((".log", ".json", ".txt")):
+                            self.loop.call_soon_threadsafe(self.process_file, str(event.src_path))
                     
                 def process_file(self, path: str) -> None:
                     try:

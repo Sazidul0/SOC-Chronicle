@@ -3,7 +3,9 @@
 from __future__ import annotations
 
 import json
+from datetime import UTC, datetime
 from pathlib import Path
+from typing import Any
 
 from soc_chronicle.models.report import InvestigationReport
 
@@ -41,7 +43,7 @@ class ReportGenerator:
     def export_pdf(self, report: InvestigationReport, path: Path) -> Path:
         """Export as PDF. Requires: pip install 'soc-chronicle[pdf]'"""
         try:
-            import weasyprint  # type: ignore[import]
+            import weasyprint  # type: ignore
         except ImportError as e:
             msg = "PDF export requires weasyprint. Install with: pip install 'soc-chronicle[pdf]'"
             raise ImportError(msg) from e
@@ -175,7 +177,6 @@ class ReportGenerator:
         for entry in report.timeline.sorted_entries():
             phase = entry.phase or "activity"
             color = phase_colors.get(phase, "#6b7280")
-            entry.timestamp.strftime("%H:%M:%S")
             timeline_rows += f"""
             <tr>
                 <td class="ts">{entry.timestamp.strftime("%Y-%m-%d %H:%M:%S")}</td>
@@ -251,7 +252,7 @@ class ReportGenerator:
                 <code class="ev-id">{ev.id[:8]}</code>
                 <div class="ev-content">
                     <div class="ev-summary">{ev.summary}</div>
-                    <div class="ev-source">Source: {ev.source} · {ev.timestamp.strftime("%Y-%m-%d %H:%M:%S UTC")}</div>
+                    <div class="ev-source">Source: {ev.source} · {ev.timestamp.strftime("%Y-%m-%d %H:%M:%S UTC") if ev.timestamp else "Unknown"}</div>
                 </div>
             </div>"""
 
@@ -755,7 +756,7 @@ const graphData = {json.dumps(graph_data)};
 </body>
 </html>"""
 
-    def _build_d3_data(self, report: InvestigationReport) -> dict:
+    def _build_d3_data(self, report: InvestigationReport) -> dict[str, Any]:
         """Build D3.js compatible graph data from InvestigationGraph."""
         nodes = [
             {

@@ -20,7 +20,7 @@ class SyslogConnector(IngestConnector):
         self.port = port
         self.host = host
         self.queue: asyncio.Queue[str] = asyncio.Queue()
-        self.transport = None
+        self.transport: asyncio.DatagramTransport | None = None
         
     async def connect(self) -> None:
         class SyslogProtocol(asyncio.DatagramProtocol):

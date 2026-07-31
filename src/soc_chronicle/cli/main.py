@@ -278,7 +278,7 @@ def ingest_evtx(file_path: str) -> None:
     from soc_chronicle.connectors.base import ConnectorConfig
     from soc_chronicle.connectors.evtx_connector import EvtxConnector
     
-    async def run():
+    async def run() -> None:
         cfg = ConnectorConfig(source_name="evtx")
         connector = EvtxConnector(cfg, file_path)
         await connector.connect()
@@ -298,7 +298,7 @@ def ingest_watch(directory: str) -> None:
     from soc_chronicle.connectors.base import ConnectorConfig
     from soc_chronicle.connectors.filewatch import FileWatchConnector
     
-    async def run():
+    async def run() -> None:
         cfg = ConnectorConfig(source_name="filewatch")
         connector = FileWatchConnector(cfg, directory)
         await connector.connect()
@@ -315,7 +315,7 @@ def ingest_syslog(port: int = typer.Option(514, "--port")) -> None:
     from soc_chronicle.connectors.base import ConnectorConfig
     from soc_chronicle.connectors.syslog import SyslogConnector
     
-    async def run():
+    async def run() -> None:
         cfg = ConnectorConfig(source_name="syslog")
         connector = SyslogConnector(cfg, port=port)
         await connector.connect()
@@ -332,7 +332,7 @@ def serve(port: int = typer.Option(8514, "--port")) -> None:
     from soc_chronicle.connectors.base import ConnectorConfig
     from soc_chronicle.connectors.webhook import WebhookConnector
     
-    async def run():
+    async def run() -> None:
         cfg = ConnectorConfig(source_name="webhook")
         connector = WebhookConnector(cfg, port=port)
         await connector.connect()
@@ -353,8 +353,6 @@ def hunt(
     
     gen = HuntingGenerator()
     console.print("[bold green]Hunting pack generated![/bold green] (Example output)")
-    # Just a placeholder for CLI, actual integration goes through InvestigationEngine
-    for query in gen.generate_ioc_pivot_queries("example.exe"):
-        console.print(f"[{query.platform.upper()}] {query.query}")
-
-    app()
+    # Placeholder since hunting generator generates dict of queries
+    queries = gen.generate([], [])
+    console.print(f"[{'wazuh'.upper()}] {queries.get('wazuh', '')}")
