@@ -1,148 +1,85 @@
-<p align="center">
-  <img src="https://github.com/Sazidul0/SOC-Chronicle/raw/main/soc-chronicle-lockup.svg" alt="soc-chronicle banner" width="600"/>
-</p>
+# SOC-Chronicle
 
-<p align="center">
-  <a href="https://pypi.org/project/soc-chronicle/"><img src="https://img.shields.io/pypi/v/soc-chronicle.svg?color=blue" alt="PyPI version"></a>
-  <a href="https://pypi.org/project/soc-chronicle/"><img src="https://img.shields.io/pypi/pyversions/soc-chronicle.svg" alt="Python versions"></a>
-  <a href="https://github.com/Sazidul0/SOC-Chronicle/actions"><img src="https://github.com/Sazidul0/SOC-Chronicle/actions/workflows/ci.yml/badge.svg" alt="Build Status"></a>
-  <a href="https://github.com/Sazidul0/SOC-Chronicle/blob/main/LICENSE"><img src="https://img.shields.io/github/license/Sazidul0/SOC-Chronicle.svg" alt="License"></a>
-  <a href="https://github.com/Sazidul0/SOC-Chronicle/stargazers"><img src="https://img.shields.io/github/stars/Sazidul0/SOC-Chronicle.svg" alt="GitHub Stars"></a>
-  <a href="https://github.com/Sazidul0/SOC-Chronicle/issues"><img src="https://img.shields.io/github/issues/Sazidul0/SOC-Chronicle.svg" alt="GitHub Issues"></a>
-</p>
+Professional SOC Investigation, Threat Hunting, and Incident Narrative Engine.
 
-<p align="center">
-  Open-source <strong>Attack Investigation & Incident Narrative Engine</strong> — transforms raw cybersecurity alerts into complete, evidence-driven attack narratives.
-</p>
+SOC-Chronicle is an open-source security engineering project designed to automatically correlate raw logs from disparate security tools, normalize them into a unified schema, and generate actionable investigation reports.
 
-## Vision
+## Key Capabilities
 
-soc-chronicle sits between existing detection platforms (SIEM, EDR, XDR, Cloud Security, IDS/IPS) and incident response workflows. Unlike traditional SIEMs that collect and search logs, soc-chronicle focuses on:
+- **Unified Log Normalization**: Maps logs from Sysmon, Microsoft Sentinel, Okta, PAN-OS, CEF, Zeek, Windows Security, and more into an OCSF-aligned schema.
+- **Automated Correlation**: Links events temporally and directionally using an in-memory or DuckDB-powered correlation engine.
+- **MITRE ATT&CK Mapping**: High-fidelity detection of over 70+ techniques including LOLBin abuse, credential access tools, network C2, and lateral movement.
+- **Threat Intelligence**: Built-in free enrichment from VirusTotal, Shodan InternetDB, IP-API, AlienVault OTX, and GreyNoise.
+- **Interactive Reporting**: Generates a professional HTML report featuring a dynamic D3.js attack graph, risk gauge, IOC tables, and a chronological attack narrative.
+- **Case Management**: Triage workflow allowing creation of cases, attaching notes/artifacts, and exporting case summaries.
+- **Live Ingestion**: Supports parsing Windows EVTX files, watching log directories, Syslog UDP/TCP, and HTTP webhooks.
 
-- **Investigation automation** — correlate events, build attack graphs, reconstruct timelines
-- **Evidence correlation** — every conclusion traces back to supporting evidence
-- **Root cause analysis** — patient zero, initial compromise, blast radius
-- **Deterministic analysis** — explainable outputs, no black-box scoring
+## Installation
+
+```bash
+pip install soc-chronicle
+```
+
+Install with all optional connectors and PDF export capability:
+```bash
+pip install soc-chronicle[all]
+```
 
 ## Quick Start
 
+Run a full automated investigation and generate a professional interactive HTML report:
+
 ```bash
-# Install from PyPI
-pip install soc-chronicle
-
-# Run an investigation
-chronicle investigate examples/alert.json --logs examples/logs
-
-# Export report
-chronicle investigate examples/alert.json --logs examples/logs -o report.md
-
-# Extract IOCs
-chronicle enrich indicators.txt
-
-# Build timeline from logs
-chronicle timeline examples/logs/
+chronicle investigate examples/alert.json --logs examples/logs/ --enrich -o report.html --format html
 ```
 
-## Python API
+## Triage & Case Management Workflow
 
-```python
-from soc_chronicle import InvestigationEngine
-
-engine = InvestigationEngine()
-report = engine.investigate(
-    alert="examples/alert.json",
-    logs="./examples/logs",
-)
-
-print(report.summary)
-print(report.narrative)
-print(f"Risk: {report.risk.total_score}/100")
-print(f"Patient zero: {report.patient_zero}")
+Create a case directly from an investigation report:
+```bash
+chronicle case new --from-report report.json
 ```
 
-## Architecture
-
-```
-Security Alert → Alert Intake → IOC Extraction + Log Normalization (OCSF)
-                                      ↓
-                              Correlation Engine
-                                      ↓
-              Attack Graph ← Timeline Engine → Risk Engine
-                                      ↓
-                        Incident Narrative Generator
-                                      ↓
-                    Markdown / JSON / HTML Reports
+List active cases:
+```bash
+chronicle case list --status open
 ```
 
-## Core Modules
-
-| Module | Description |
-|--------|-------------|
-| `intake` | Alert ingestion (JSON, YAML, files) with deduplication |
-| `ioc` | IOC extraction with regex pipelines and defanging |
-| `normalization` | Log parsing (Sysmon, CrowdStrike, ECS, CloudTrail, etc.) → OCSF |
-| `correlation` | Temporal and entity-based event correlation |
-| `graph` | Attack graph construction and analysis (NetworkX) |
-| `timeline` | Chronological attack reconstruction |
-| `root_cause` | Patient zero and initial compromise analysis |
-| `risk` | Evidence-based, explainable risk scoring |
-| `mitre` | MITRE ATT&CK technique mapping |
-| `narrative` | Analyst-friendly incident narratives with citations |
-| `hunting` | Sigma, Splunk, Elastic, Sentinel, Wazuh query generation |
-| `report` | Markdown, HTML, JSON export |
-| `threat_intel` | Async enrichment (VirusTotal, AbuseIPDB, pluggable) |
-| `plugins` | Extensible parser, enrichment, and exporter plugins |
-
-## Configuration
-
-Create `chronicle.yaml`:
-
-```yaml
-log_level: INFO
-correlation_window_seconds: 3600
-threat_intel:
-  virustotal:
-    enabled: true
-    api_key: "${VT_API_KEY}"
+Add investigation notes:
+```bash
+chronicle case note CASE-A1B2C3D4 "Confirmed lateral movement via SMB."
 ```
 
-## Plugin Development
+## Supported Ingest Connectors
 
-Register plugins via entry points in `pyproject.toml`:
+| Connector | Description | Usage |
+|-----------|-------------|-------|
+| EVTX | Parse Windows Event Log binary files | `chronicle ingest evtx file.evtx` |
+| File Watch | Stream from growing local log directories | `chronicle ingest watch /var/log/syslog` |
+| Syslog | Receive RFC 5424/3164 Syslog (UDP) | `chronicle ingest syslog --port 514` |
+| Webhook | Receive JSON HTTP POSTs | `chronicle serve --port 8514` |
 
-```toml
-[project.entry-points."soc_chronicle.plugins"]
-my_parser = "my_package:MyLogParser"
+## Threat Hunting Pack
+
+Automatically generate pivoting queries across Sigma, Splunk, Sentinel, and Elastic for IOCs identified in the alert:
+
+```bash
+chronicle hunt --alert alert.json --logs /path/to/logs
 ```
 
-Implement `LogParserPlugin`, `EnrichmentProviderPlugin`, or `ExporterPlugin` from `soc_chronicle.plugins.registry`.
+## Advanced Search
+
+Search the normalized event database (DuckDB) quickly:
+
+```bash
+chronicle search --query "powershell.exe" --field process
+```
 
 ## Development
 
-```bash
-pip install -e ".[dev]"
-pytest
-ruff check src tests
-mypy src/soc_chronicle
-mkdocs serve
-```
-
-## Docker
+Set up a local development environment:
 
 ```bash
-docker build -t soc-chronicle .
-docker run soc-chronicle investigate /app/examples/alert.json --logs /app/examples/logs
+hatch shell
+pytest tests/
 ```
-
-## Design Principles
-
-- **Deterministic** over probabilistic reasoning
-- **Explainable** outputs backed by evidence
-- **Vendor-neutral** architecture
-- **Plugin-based** extensibility
-- **Offline-capable** local processing
-- **Security-first** design
-
-## License
-
-Apache-2.0

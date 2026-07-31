@@ -4,15 +4,18 @@ build-backend = "hatchling.build"
 
 [project]
 name = "soc-chronicle"
-version = "0.1.0"
-description = "Open-source attack investigation and incident narrative engine"
+version = "0.2.0"
+description = "Professional SOC investigation, threat hunting, and incident narrative engine for security analysts"
 readme = "README.md"
 license = "Apache-2.0"
 requires-python = ">=3.11"
 authors = [{ name = "soc-chronicle contributors" }]
-keywords = ["security", "soc", "incident-response", "threat-hunting", "forensics"]
+keywords = [
+    "security", "soc", "incident-response", "threat-hunting", "forensics",
+    "ocsf", "mitre-attack", "duckdb", "siem", "edr", "log-analysis",
+]
 classifiers = [
-    "Development Status :: 3 - Alpha",
+    "Development Status :: 4 - Beta",
     "Intended Audience :: Information Technology",
     "License :: OSI Approved :: Apache Software License",
     "Programming Language :: Python :: 3",
@@ -20,6 +23,8 @@ classifiers = [
     "Programming Language :: Python :: 3.12",
     "Programming Language :: Python :: 3.13",
     "Topic :: Security",
+    "Topic :: System :: Monitoring",
+    "Topic :: System :: Logging",
     "Typing :: Typed",
 ]
 dependencies = [
@@ -48,8 +53,15 @@ dev = [
     "types-networkx>=3.0",
     "types-PyYAML>=6.0",
 ]
-analytics = ["duckdb>=1.1"]
-ai = ["httpx>=0.28.0"]
+# Windows EVTX binary log file parsing
+evtx = ["python-evtx>=0.7"]
+# File-watching / directory monitoring (polling fallback built-in, watchdog optional)
+watch = ["watchdog>=4.0"]
+# HTTP webhook server for Filebeat/Vector/Fluent Bit ingestion
+serve = ["aiohttp>=3.9"]
+# PDF report export (large optional dependency)
+pdf = ["weasyprint>=62.0"]
+# All connectors + PDF
 all = [
     # dev
     "bandit[toml]>=1.7",
@@ -63,10 +75,12 @@ all = [
     "pip-audit>=2.7",
     "types-networkx>=3.0",
     "types-PyYAML>=6.0",
-    # analytics
-    "duckdb>=1.1",
-    # ai
-    "httpx>=0.28.0",
+    # connectors
+    "python-evtx>=0.7",
+    "watchdog>=4.0",
+    "aiohttp>=3.9",
+    # pdf
+    "weasyprint>=62.0",
 ]
 
 [project.scripts]
@@ -76,6 +90,8 @@ chronicle = "soc_chronicle.cli.main:app"
 Homepage = "https://github.com/Sazidul0/SOC-Chronicle"
 Documentation = "https://github.com/Sazidul0/SOC-Chronicle"
 Repository = "https://github.com/Sazidul0/SOC-Chronicle"
+Issues = "https://github.com/Sazidul0/SOC-Chronicle/issues"
+Changelog = "https://github.com/Sazidul0/SOC-Chronicle/blob/main/CHANGELOG.md"
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/soc_chronicle"]

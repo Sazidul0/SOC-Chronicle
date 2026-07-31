@@ -68,6 +68,7 @@ secrets.json
 .pypirc
 
 # ─── Project-specific ─────────────────────────────────────────────────────────
+LogHub/
 *.local.toml
 .chronicle/
 .cache/

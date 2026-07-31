@@ -3,12 +3,17 @@
 from __future__ import annotations
 
 import json
+import re
+from collections.abc import Iterator
 from datetime import datetime
 from pathlib import Path
 from typing import Any, cast
 
 from soc_chronicle.models.event import NormalizedEvent, OCSFClass
 from soc_chronicle.models.ocsf.validators import serialize_raw_data
+
+_SHA256_RE = re.compile(r'SHA256=([0-9a-fA-F]{64})', re.IGNORECASE)
+_MD5_RE = re.compile(r'MD5=([0-9a-fA-F]{32})', re.IGNORECASE)
 
 
 class LogNormalizationEngine:
@@ -30,6 +35,10 @@ class LogNormalizationEngine:
         "elastic_ecs": "_parse_elastic_ecs",
         "cloudtrail": "_parse_cloudtrail",
         "suricata": "_parse_suricata",
+        "okta": "_parse_okta",
+        "sentinel": "_parse_sentinel",
+        "cef": "_parse_cef",
+        "paloalto": "_parse_paloalto",
         "generic": "_parse_generic",
     }
 
@@ -72,6 +81,23 @@ class LogNormalizationEngine:
         return cast(NormalizedEvent | None, getattr(self, method_name)(record))
 
     def _detect_parser(self, record: dict[str, Any]) -> str:
+        # Okta System Log — check early (has `actor` + `eventType` keys)
+        if "actor" in record and "eventType" in record:
+            return "okta"
+        # Microsoft Sentinel raw exports — TimeGenerated is the canonical field
+        if "TimeGenerated" in record and (
+            "InitiatingProcessFileName" in record or "Computer" in record
+        ):
+            return "sentinel"
+        # PAN-OS: type in TRAFFIC/THREAT/SYSTEM + serial or device_name
+        if str(record.get("type") or "").upper() in {"TRAFFIC", "THREAT", "SYSTEM", "CONFIG"} and (
+            "serial" in record or "device_name" in record or "src" in record
+        ):
+            return "paloalto"
+        # CEF: DeviceVendor field present or raw string starts with 'CEF:'
+        if "DeviceVendor" in record or str(record.get("raw", "") or "").startswith("CEF:"):
+            return "cef"
+        # Sysmon / Windows Security
         if "EventID" in record or record.get("source") == "Microsoft-Windows-Sysmon" or "event_id" in record:
             channel = str(record.get("Channel") or record.get("channel") or "").lower()
             if channel == "security":
@@ -132,7 +158,7 @@ class LogNormalizationEngine:
             parent_process_pid=self._int_or_none(record.get("ParentProcessId")),
             parent_process_guid=record.get("ParentProcessGuid") or record.get("parent_process_guid"),
             file_path=record.get("TargetFilename") or record.get("file_path"),
-            file_hash=record.get("Hashes") or record.get("sha256"),
+            file_hash=self._extract_sha256_from_hashes(record.get("Hashes") or record.get("sha256") or ""),
             src_ip=record.get("SourceIp") or record.get("src_ip"),
             src_port=self._int_or_none(record.get("SourcePort") or record.get("src_port")),
             dst_ip=record.get("DestinationIp") or record.get("dst_ip"),
@@ -422,6 +448,7 @@ class LogNormalizationEngine:
                     continue
         return datetime.now(tz=UTC)
 
+
     @staticmethod
     def _int_or_none(value: Any) -> int | None:
         if value is None:
@@ -430,3 +457,153 @@ class LogNormalizationEngine:
             return int(value)
         except (TypeError, ValueError):
             return None
+
+    @staticmethod
+    def _extract_sha256_from_hashes(hashes_str: str) -> str | None:
+        """Extract SHA256 from Sysmon/CrowdStrike Hashes field.
+
+        The Hashes field is typically: ``'MD5=abc...,SHA256=def...,SHA1=xyz...'``.
+        Returns the bare SHA256 hex string, or the original value if it's already
+        a valid 64-char hex digest.
+        """
+        if not hashes_str:
+            return None
+        # Already a bare sha256
+        if len(hashes_str) == 64 and all(c in '0123456789abcdefABCDEF' for c in hashes_str):
+            return hashes_str.lower()
+        m = _SHA256_RE.search(hashes_str)
+        if m:
+            return m.group(1).lower()
+        m = _MD5_RE.search(hashes_str)
+        if m:
+            return m.group(1).lower()  # fallback: return MD5 if no SHA256
+        return None
+
+    def normalize_stream(
+        self, path: Path, parser: str | None = None, batch_size: int = 1000
+    ) -> Iterator[list[NormalizedEvent]]:
+        """Stream-normalize a large log file in configurable batches.
+
+        Yields lists of up to *batch_size* :class:`NormalizedEvent` objects,
+        avoiding loading the entire file into memory. Suitable for 1GB+ log files.
+        """
+        batch: list[NormalizedEvent] = []
+        with path.open(encoding="utf-8", errors="replace") as f:
+            for line in f:
+                line = line.strip()
+                if not line:
+                    continue
+                try:
+                    record = json.loads(line)
+                except json.JSONDecodeError:
+                    record = {"message": line, "raw_source": path.name}
+                event = self.normalize_record(record, parser)
+                if event is not None:
+                    batch.append(event)
+                if len(batch) >= batch_size:
+                    yield batch
+                    batch = []
+        if batch:
+            yield batch
+
+    # ── New parsers ───────────────────────────────────────────────────────────
+
+    def _parse_okta(self, record: dict[str, Any]) -> NormalizedEvent:
+        """Parse Okta System Log events."""
+        actor = record.get("actor") or {}
+        client = record.get("client") or {}
+        outcome = record.get("outcome") or {}
+        geo = client.get("geographicalContext") or {}
+        return NormalizedEvent(
+            class_uid=OCSFClass.AUTHENTICATION,
+            activity_name=str(record.get("eventType") or "Okta Event"),
+            timestamp=self._parse_ts(record),
+            user=actor.get("displayName") or actor.get("alternateId"),
+            src_ip=client.get("ipAddress"),
+            host=f"{geo.get('city', '')},{geo.get('country', '')}".strip(",") or None,
+            session_id=record.get("uuid"),
+            source_type="okta",
+            raw_data=serialize_raw_data(record),
+            raw=record,
+        )
+
+    def _parse_sentinel(self, record: dict[str, Any]) -> NormalizedEvent:
+        """Parse Microsoft Sentinel raw table exports."""
+        tbl = str(record.get("Type") or record.get("TableName") or "").lower()
+        class_uid = OCSFClass.PROCESS_ACTIVITY
+        if "network" in tbl:
+            class_uid = OCSFClass.NETWORK_ACTIVITY
+        elif "auth" in tbl or "logon" in tbl:
+            class_uid = OCSFClass.AUTHENTICATION
+        elif "file" in tbl:
+            class_uid = OCSFClass.FILE_ACTIVITY
+        return NormalizedEvent(
+            class_uid=class_uid,
+            activity_name=str(record.get("ActionType") or record.get("Type") or "Sentinel Event"),
+            timestamp=self._parse_ts(record),
+            host=record.get("DeviceName") or record.get("Computer") or record.get("ComputerName"),
+            user=record.get("AccountName") or record.get("Account") or record.get("TargetUserName"),
+            process_name=record.get("InitiatingProcessFileName") or record.get("ProcessName"),
+            process_pid=self._int_or_none(record.get("InitiatingProcessId") or record.get("ProcessId")),
+            parent_process_name=record.get("InitiatingProcessParentFileName"),
+            src_ip=record.get("RemoteIP") or record.get("IPAddress"),
+            dst_port=self._int_or_none(record.get("RemotePort")),
+            file_hash=self._extract_sha256_from_hashes(record.get("SHA256") or record.get("InitiatingProcessSHA256") or ""),
+            registry_key=record.get("RegistryKey"),
+            source_type="sentinel",
+            raw_data=serialize_raw_data(record),
+            raw=record,
+        )
+
+    def _parse_cef(self, record: dict[str, Any]) -> NormalizedEvent:
+        """Parse CEF (ArcSight Common Event Format) records."""
+        ext = record.get("extension") or {}
+        if isinstance(ext, str):
+            # Parse space-separated key=value extension block
+            ext = {}
+            for kv in record["extension"].split(" "):
+                if "=" in kv:
+                    k, _, v = kv.partition("=")
+                    ext[k.strip()] = v.strip()
+        return NormalizedEvent(
+            class_uid=OCSFClass.DETECTION_FINDING,
+            activity_name=str(record.get("name") or record.get("Name") or "CEF Event"),
+            timestamp=self._parse_ts(record),
+            src_ip=ext.get("src") or ext.get("sourceAddress"),
+            src_port=self._int_or_none(ext.get("spt") or ext.get("sourcePort")),
+            dst_ip=ext.get("dst") or ext.get("destinationAddress"),
+            dst_port=self._int_or_none(ext.get("dpt") or ext.get("destinationPort")),
+            host=ext.get("dhost") or ext.get("deviceHostName") or record.get("deviceHostName"),
+            user=ext.get("suser") or ext.get("sourceUserName"),
+            process_name=ext.get("sproc") or ext.get("sourceProcessName"),
+            file_path=ext.get("filePath") or ext.get("fname"),
+            file_hash=self._extract_sha256_from_hashes(ext.get("fileHash") or ""),
+            protocol=ext.get("proto"),
+            source_type="cef",
+            raw_data=serialize_raw_data(record),
+            raw=record,
+        )
+
+    def _parse_paloalto(self, record: dict[str, Any]) -> NormalizedEvent:
+        """Parse Palo Alto Networks PAN-OS traffic and threat logs."""
+        log_type = str(record.get("type") or record.get("LogType") or "").lower()
+        class_uid = OCSFClass.NETWORK_ACTIVITY
+        activity = f"PAN-OS {log_type.title() or 'Traffic'} Log"
+        if "threat" in log_type:
+            class_uid = OCSFClass.DETECTION_FINDING
+        return NormalizedEvent(
+            class_uid=class_uid,
+            activity_name=activity,
+            timestamp=self._parse_ts(record),
+            src_ip=record.get("src") or record.get("srcip") or record.get("src_ip"),
+            src_port=self._int_or_none(record.get("sport") or record.get("src_port")),
+            dst_ip=record.get("dst") or record.get("dstip") or record.get("dst_ip"),
+            dst_port=self._int_or_none(record.get("dport") or record.get("dst_port")),
+            protocol=record.get("proto") or record.get("protocol"),
+            user=record.get("srcuser") or record.get("src_user") or record.get("dstuser"),
+            host=record.get("device_name") or record.get("hostname") or record.get("devicename"),
+            domain=record.get("url") or record.get("threat_name"),
+            source_type="paloalto",
+            raw_data=serialize_raw_data(record),
+            raw=record,
+        )

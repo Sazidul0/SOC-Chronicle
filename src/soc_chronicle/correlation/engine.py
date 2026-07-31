@@ -110,7 +110,9 @@ class CorrelationEngine:
                 groups[primary].append(event)
                 for extra in sorted(matched_groups - {primary}, reverse=True):
                     groups[primary].extend(groups.pop(extra))
-                    self._reindex(groups, index)
+                # Re-sort the merged group so anchor (groups[primary][0]) is always earliest
+                groups[primary].sort(key=lambda e: e.timestamp)
+                self._reindex(groups, index)
                 new_idx = primary
 
             for field in self.CORRELATION_FIELDS:
