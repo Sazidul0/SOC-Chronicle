@@ -11,7 +11,7 @@ from typing import Any
 from soc_chronicle.connectors.base import ConnectorConfig, IngestConnector
 
 try:
-    from watchdog.events import FileSystemEvent, FileSystemEventHandler
+    from watchdog.events import FileSystemEventHandler
     from watchdog.observers import Observer
 except ImportError:
     Observer = None  # type: ignore
@@ -40,9 +40,8 @@ class FileWatchConnector(IngestConnector):
                     self.positions: dict[str, int] = {}
                     
                 def on_modified(self, event: Any) -> None:
-                    if not event.is_directory:
-                        if str(event.src_path).endswith((".log", ".json", ".txt")):
-                            self.loop.call_soon_threadsafe(self.process_file, str(event.src_path))
+                    if not event.is_directory and str(event.src_path).endswith((".log", ".json", ".txt")):
+                        self.loop.call_soon_threadsafe(self.process_file, str(event.src_path))
                     
                 def process_file(self, path: str) -> None:
                     try:
