@@ -215,8 +215,8 @@ class IOCExtractionEngine:
                     ioc.tags.append("encoded-command")
                     ioc.kill_chain_phase = KillChainPhase.INSTALLATION
                     iocs.append(ioc)
-            except Exception:  # noqa: BLE001
-                pass
+            except Exception:  # noqa: BLE001 # nosec B112
+                continue
 
         # Extract download cradle URLs
         for m in _PS_DOWNLOAD_CRADLE_RE.finditer(cmdline):

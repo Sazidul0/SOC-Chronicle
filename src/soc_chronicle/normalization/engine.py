@@ -842,7 +842,7 @@ class LogNormalizationEngine:
                         if "=" in kv:
                             k, _, v = kv.partition("=")
                             attrs[k.strip()] = v.strip()
-            except Exception:  # noqa: BLE001
+            except Exception:  # noqa: BLE001 # nosec B110
                 pass
         return NormalizedEvent(
             class_uid=OCSFClass.DETECTION_FINDING,

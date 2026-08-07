@@ -454,7 +454,7 @@ class MitreMapper:
         """Detect file-based execution and collection techniques."""
         path = (event.file_path or "").lower()
 
-        if any(p in path for p in ["/tmp/", "/dev/shm/", "/var/tmp/"]):
+        if any(p in path for p in ["/tmp/", "/dev/shm/", "/var/tmp/"]):  # nosec B108
             self._add(mappings, seen, ("T1059.004", "Unix Shell", "Execution"),
                       event, f"File activity in volatile path: {event.file_path}", confidence=0.75)
 

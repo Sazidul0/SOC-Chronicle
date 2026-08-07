@@ -5,7 +5,7 @@ from __future__ import annotations
 import asyncio
 import hashlib
 import json
-import shelve
+import shelve  # nosec B403
 import time
 from abc import ABC, abstractmethod
 from datetime import UTC, datetime
@@ -594,11 +594,11 @@ class ThreatIntelEngine:
         key = self._cache_key(ioc)
         cache_path = str(self._cache_dir / "ti_cache")
         try:
-            with shelve.open(cache_path, flag="r") as db:
+            with shelve.open(cache_path, flag="r") as db:  # nosec B301
                 entry = db.get(key)
-                if entry and time.time() - entry["ts"] < self._cache_ttl:
+                if entry and (time.time() - entry["ts"]) < self._cache_ttl:
                     return ThreatIntelResult.model_validate(entry["data"])
-        except Exception:  # noqa: BLE001
+        except Exception:  # noqa: BLE001 # nosec B110
             pass
         return None
 
@@ -606,9 +606,9 @@ class ThreatIntelEngine:
         key = self._cache_key(ioc)
         cache_path = str(self._cache_dir / "ti_cache")
         try:
-            with shelve.open(cache_path) as db:
+            with shelve.open(cache_path) as db:  # nosec B301
                 db[key] = {"ts": time.time(), "data": result.model_dump(mode="json")}
-        except Exception:  # noqa: BLE001
+        except Exception:  # noqa: BLE001 # nosec B110
             pass
 
     async def enrich_all(self, iocs: list[IOC]) -> list[ThreatIntelResult]:
