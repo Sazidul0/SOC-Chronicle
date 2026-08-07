@@ -3,13 +3,11 @@
 from __future__ import annotations
 
 import re
-from collections import Counter
 from typing import Any
 
 from soc_chronicle.models.event import NormalizedEvent, OCSFClass
 from soc_chronicle.models.evidence import EvidenceRef
 from soc_chronicle.models.mitre import MitreMapping
-
 
 # ATT&CK v15 version marker
 ATTACK_VERSION = "15"
@@ -447,7 +445,7 @@ class MitreMapper:
                       event, f"Authentication failure from {src_ip}", confidence=0.70)
         else:
             self._add(mappings, seen, ("T1078", "Valid Accounts", "Initial Access"),
-                      event, f"Successful authentication event", confidence=0.55)
+                      event, "Successful authentication event", confidence=0.55)
 
     def _analyze_file(self, mappings: list[MitreMapping], seen: set[str],
                        event: NormalizedEvent) -> None:

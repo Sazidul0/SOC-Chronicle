@@ -3,13 +3,12 @@
 from __future__ import annotations
 
 import asyncio
+import contextlib
 import hashlib
-import json
 import shelve  # nosec B403
 import time
 from abc import ABC, abstractmethod
 from datetime import UTC, datetime
-from pathlib import Path
 from typing import Any
 
 import httpx
@@ -17,7 +16,6 @@ import httpx
 from soc_chronicle.config.settings import ChronicleSettings, ThreatIntelProviderConfig
 from soc_chronicle.models.ioc import IOC, IOCType
 from soc_chronicle.models.threat_intel import ProviderResult, ThreatIntelResult
-
 
 # ---------------------------------------------------------------------------
 # Rate limiter (token bucket)
@@ -215,10 +213,8 @@ class MalwareBazaarProvider(ThreatIntelProvider):
         first_seen_str = item.get("first_seen")
         first_seen = None
         if first_seen_str:
-            try:
+            with contextlib.suppress(ValueError):
                 first_seen = datetime.fromisoformat(first_seen_str.replace(" ", "T")).replace(tzinfo=UTC)
-            except ValueError:
-                pass
         return ProviderResult(
             provider=self.name,
             status="ok",
@@ -247,10 +243,7 @@ class URLhausProvider(ThreatIntelProvider):
         if ioc.type == IOCType.URL:
             endpoint = f"{self._BASE}url/"
             payload = {"url": ioc.value}
-        elif ioc.type == IOCType.DOMAIN:
-            endpoint = f"{self._BASE}host/"
-            payload = {"host": ioc.value}
-        elif ioc.type == IOCType.IPV4:
+        elif ioc.type == IOCType.DOMAIN or ioc.type == IOCType.IPV4:
             endpoint = f"{self._BASE}host/"
             payload = {"host": ioc.value}
         else:
@@ -356,7 +349,7 @@ class ShodanInternetDBProvider(ThreatIntelProvider):
         ports = data.get("ports") or []
         cpes = data.get("cpes") or []
         tags = data.get("tags") or []
-        hostnames = data.get("hostnames") or []
+        data.get("hostnames") or []
         is_malicious = len(vulns) > 0
         return ProviderResult(
             provider=self.name,

@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import json
 import uuid
 from datetime import UTC, datetime
 from typing import Any
@@ -174,11 +173,11 @@ class HuntingGenerator:
         conditions: list[str] = []
         strings: list[str] = []
 
-        for i, h in enumerate(hashes_256[:5]):
+        for h in hashes_256[:5]:
             conditions.append(f"hash.sha256(0, filesize) == \"{h}\"")
 
         for i, p in enumerate(processes[:5]):
-            safe = p.replace(".", "_").replace("-", "_")
+            p.replace(".", "_").replace("-", "_")
             strings.append(f'    $proc_{i} = "{p}" nocase wide ascii')
         if strings:
             conditions.append("any of ($proc_*)")
@@ -242,7 +241,7 @@ class HuntingGenerator:
         if processes:
             proc_filter = " or ".join(f'InitiatingProcessFileName has "{p}"' for p in processes[:5])
             lines.append(
-                f"let suspiciousProcesses = datatable(name: string)\n"
+                "let suspiciousProcesses = datatable(name: string)\n"
                 + "".join(f'  ["{p}"]\n' for p in processes[:10])
                 + ";\n"
                 f"DeviceProcessEvents\n"

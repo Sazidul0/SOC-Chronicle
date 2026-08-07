@@ -8,7 +8,7 @@ import re
 from collections.abc import Iterable
 
 from soc_chronicle.models.alert import Alert
-from soc_chronicle.models.ioc import IOC, IOCType, KillChainPhase, TLPLevel
+from soc_chronicle.models.ioc import IOC, IOCType, KillChainPhase
 
 # ---------------------------------------------------------------------------
 # Defanging / refanging
@@ -360,13 +360,11 @@ class IOCExtractionEngine:
             if len(parts) < 2 or len(parts[-1]) < 2:
                 return False
 
-        if ioc_type == IOCType.IPV4:
-            if self._is_private_ip(value):
-                return False
+        if ioc_type == IOCType.IPV4 and self._is_private_ip(value):
+            return False
 
-        if ioc_type == IOCType.CIDR:
-            if self._is_private_cidr(value):
-                return False
+        if ioc_type == IOCType.CIDR and self._is_private_cidr(value):
+            return False
 
         # MD5 must be exactly 32 chars
         if ioc_type == IOCType.MD5 and len(value) != 32:
@@ -381,10 +379,7 @@ class IOCExtractionEngine:
         if ioc_type == IOCType.JARM and len(value) != 62:
             return False
         # CVE validation
-        if ioc_type == IOCType.CVE and not value.upper().startswith("CVE-"):
-            return False
-
-        return True
+        return not (ioc_type == IOCType.CVE and not value.upper().startswith("CVE-"))
 
     @staticmethod
     def _is_private_ip(value: str) -> bool:
