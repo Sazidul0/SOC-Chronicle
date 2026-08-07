@@ -39,6 +39,16 @@ class LogNormalizationEngine:
         "sentinel": "_parse_sentinel",
         "cef": "_parse_cef",
         "paloalto": "_parse_paloalto",
+        "aws_vpc_flow": "_parse_aws_vpc_flow",
+        "gcp_cloud_logging": "_parse_gcp_cloud_logging",
+        "github_audit": "_parse_github_audit",
+        "k8s_audit": "_parse_k8s_audit",
+        "mde": "_parse_mde",
+        "cisco_ios": "_parse_cisco_ios",
+        "fortigate": "_parse_fortigate",
+        "leef": "_parse_leef",
+        "clf": "_parse_clf",
+        "windows_dhcp": "_parse_windows_dhcp",
         "generic": "_parse_generic",
     }
 
@@ -130,6 +140,44 @@ class LogNormalizationEngine:
             return "suricata"
         if record.get("action") in ("allow", "deny", "block", "drop") and "src_ip" in record and "dst_ip" in record:
             return "firewall"
+        # AWS VPC Flow Logs: has 'version', 'account-id', 'interface-id' or 'srcaddr'
+        if "srcaddr" in record and "dstaddr" in record and "interface-id" in record:
+            return "aws_vpc_flow"
+        if record.get("version") == "1" and "srcaddr" in record and "dstaddr" in record:
+            return "aws_vpc_flow"
+        # GCP Cloud Logging: has 'logName' and 'protoPayload' or 'jsonPayload'
+        if "logName" in record and ("protoPayload" in record or "jsonPayload" in record or "httpRequest" in record):
+            return "gcp_cloud_logging"
+        # GitHub Audit Log: has 'action' and 'actor' and 'org'/'repo'
+        if "action" in record and "actor" in record and ("org" in record or "repo" in record):
+            return "github_audit"
+        # Kubernetes Audit: has 'apiVersion' with 'audit.k8s.io'
+        if str(record.get("apiVersion", "")).startswith("audit.k8s.io"):
+            return "k8s_audit"
+        if "requestURI" in record and "user" in record and "verb" in record:
+            return "k8s_audit"
+        # MDE (Microsoft Defender for Endpoint): has 'DeviceId' and 'MachineGroup'
+        if "DeviceId" in record and ("MachineGroup" in record or "TenantId" in record):
+            return "mde"
+        if "DeviceId" in record and "DeviceName" in record and "ActionType" in record:
+            return "mde"
+        # FortiGate: has 'devname' and 'logid'
+        if "devname" in record and "logid" in record and "type" in record:
+            return "fortigate"
+        # LEEF (IBM QRadar): raw message starts with 'LEEF:'
+        if str(record.get("raw", "") or "").startswith("LEEF:"):
+            return "leef"
+        if "leef_version" in record or record.get("DeviceEventClassID") and record.get("DeviceVendor"):
+            return "leef"
+        # Windows DHCP: has 'QResult' and 'Probationtime'
+        if "QResult" in record and "Probationtime" in record:
+            return "windows_dhcp"
+        # Apache/Nginx CLF: has 'remote_addr' or 'clientip' with 'request' and 'status'
+        if ("remote_addr" in record or "clientip" in record) and "request" in record and "status" in record:
+            return "clf"
+        # Cisco IOS/ASA: has 'facility' and 'mnemonic', or syslog with '%ASA-' or '%PIX-'
+        if ("mnemonic" in record and "facility" in record) or "%ASA-" in str(record.get("message", "")):
+            return "cisco_ios"
         return "generic"
 
     def _parse_sysmon(self, record: dict[str, Any]) -> NormalizedEvent:
@@ -604,6 +652,252 @@ class LogNormalizationEngine:
             host=record.get("device_name") or record.get("hostname") or record.get("devicename"),
             domain=record.get("url") or record.get("threat_name"),
             source_type="paloalto",
+            raw_data=serialize_raw_data(record),
+            raw=record,
+        )
+
+    def _parse_aws_vpc_flow(self, record: dict[str, Any]) -> NormalizedEvent:
+        """Parse AWS VPC Flow Log records (v2-v5 format)."""
+        action = str(record.get("action") or record.get("action-status") or "ACCEPT").upper()
+        protocol_num = str(record.get("protocol") or "")
+        proto_map = {"6": "tcp", "17": "udp", "1": "icmp"}
+        protocol = proto_map.get(protocol_num, protocol_num)
+        return NormalizedEvent(
+            class_uid=OCSFClass.NETWORK_ACTIVITY,
+            activity_name=f"VPC Flow {action}",
+            timestamp=self._parse_ts(record),
+            src_ip=record.get("srcaddr") or record.get("src-addr"),
+            src_port=self._int_or_none(record.get("srcport") or record.get("src-port")),
+            dst_ip=record.get("dstaddr") or record.get("dst-addr"),
+            dst_port=self._int_or_none(record.get("dstport") or record.get("dst-port")),
+            protocol=protocol,
+            host=record.get("instance-id") or record.get("interface-id"),
+            source_type="aws_vpc_flow",
+            raw_data=serialize_raw_data(record),
+            raw=record,
+        )
+
+    def _parse_gcp_cloud_logging(self, record: dict[str, Any]) -> NormalizedEvent:
+        """Parse GCP Cloud Logging (Stackdriver) records."""
+        proto_payload = record.get("protoPayload") or {}
+        json_payload = record.get("jsonPayload") or {}
+        http_req = record.get("httpRequest") or {}
+        log_name = record.get("logName", "")
+        resource = record.get("resource") or {}
+        resource_labels = resource.get("labels") or {}
+
+        class_uid = OCSFClass.AUTHENTICATION
+        if "http_request" in log_name.lower() or http_req:
+            class_uid = OCSFClass.HTTP_ACTIVITY
+        elif "data_access" in log_name.lower():
+            class_uid = OCSFClass.FILE_ACTIVITY
+
+        principal_email = (
+            proto_payload.get("authenticationInfo", {}).get("principalEmail")
+            or json_payload.get("actor", {}).get("user")
+        )
+        return NormalizedEvent(
+            class_uid=class_uid,
+            activity_name=str(proto_payload.get("methodName") or record.get("logName") or "GCP Event"),
+            timestamp=self._parse_ts(record),
+            user=principal_email,
+            src_ip=(
+                proto_payload.get("requestMetadata", {}).get("callerIp")
+                or http_req.get("remoteIp")
+            ),
+            host=resource_labels.get("instance_id") or resource_labels.get("project_id"),
+            source_type="gcp_cloud_logging",
+            raw_data=serialize_raw_data(record),
+            raw=record,
+        )
+
+    def _parse_github_audit(self, record: dict[str, Any]) -> NormalizedEvent:
+        """Parse GitHub Audit Log events."""
+        action = str(record.get("action") or "github_event")
+        return NormalizedEvent(
+            class_uid=OCSFClass.AUTHENTICATION,
+            activity_name=action,
+            timestamp=self._parse_ts(record),
+            user=str(record.get("actor") or record.get("user") or ""),
+            src_ip=record.get("_source_ip") or record.get("ip"),
+            host=record.get("org") or record.get("business"),
+            source_type="github_audit",
+            raw_data=serialize_raw_data(record),
+            raw=record,
+        )
+
+    def _parse_k8s_audit(self, record: dict[str, Any]) -> NormalizedEvent:
+        """Parse Kubernetes API Server Audit Log events."""
+        user_info = record.get("user") or {}
+        src_ips = record.get("sourceIPs") or []
+        src_ip = src_ips[0] if src_ips else None
+        verb = str(record.get("verb") or "")
+        resource = str((record.get("objectRef") or {}).get("resource") or "")
+        activity = f"k8s.{verb}.{resource}" if resource else f"k8s.{verb}"
+
+        class_uid = OCSFClass.PROCESS_ACTIVITY
+        if verb in {"get", "list", "watch"}:
+            class_uid = OCSFClass.FILE_ACTIVITY
+        elif verb in {"create", "delete", "patch", "update"}:
+            class_uid = OCSFClass.PROCESS_ACTIVITY
+
+        return NormalizedEvent(
+            class_uid=class_uid,
+            activity_name=activity,
+            timestamp=self._parse_ts(record),
+            user=user_info.get("username"),
+            src_ip=src_ip,
+            host=record.get("requestURI"),
+            source_type="k8s_audit",
+            raw_data=serialize_raw_data(record),
+            raw=record,
+        )
+
+    def _parse_mde(self, record: dict[str, Any]) -> NormalizedEvent:
+        """Parse Microsoft Defender for Endpoint (MDE / Advanced Hunting) records."""
+        action = str(record.get("ActionType") or "ProcessActivity")
+        class_uid = OCSFClass.PROCESS_ACTIVITY
+        if "Network" in action:
+            class_uid = OCSFClass.NETWORK_ACTIVITY
+        elif "File" in action:
+            class_uid = OCSFClass.FILE_ACTIVITY
+        elif "Registry" in action:
+            class_uid = OCSFClass.REGISTRY_KEY_ACTIVITY
+        elif "Logon" in action or "Auth" in action:
+            class_uid = OCSFClass.AUTHENTICATION
+        return NormalizedEvent(
+            class_uid=class_uid,
+            activity_name=action,
+            timestamp=self._parse_ts(record),
+            host=record.get("DeviceName") or record.get("ComputerName"),
+            user=record.get("AccountName") or record.get("InitiatingProcessAccountName"),
+            process_name=record.get("InitiatingProcessFileName") or record.get("ProcessCommandLine"),
+            process_pid=self._int_or_none(record.get("InitiatingProcessId")),
+            parent_process_name=record.get("InitiatingProcessParentFileName"),
+            file_hash=self._extract_sha256_from_hashes(record.get("SHA256") or record.get("InitiatingProcessSHA256") or ""),
+            src_ip=record.get("RemoteIP") or record.get("LocalIP"),
+            dst_port=self._int_or_none(record.get("RemotePort")),
+            registry_key=record.get("RegistryKey"),
+            source_type="mde",
+            raw_data=serialize_raw_data(record),
+            raw=record,
+        )
+
+    def _parse_cisco_ios(self, record: dict[str, Any]) -> NormalizedEvent:
+        """Parse Cisco IOS/ASA syslog records."""
+        message = str(record.get("message") or record.get("msg") or "")
+        # Try to extract src/dst from ASA message format
+        import re as _re
+        src_ip_m = _re.search(r"src\s+(?:interface)?:?\s*([\d.]+)", message, _re.IGNORECASE)
+        dst_ip_m = _re.search(r"dst\s+(?:interface)?:?\s*([\d.]+)", message, _re.IGNORECASE)
+        return NormalizedEvent(
+            class_uid=OCSFClass.NETWORK_ACTIVITY,
+            activity_name=str(record.get("mnemonic") or record.get("facility") or "Cisco IOS Event"),
+            timestamp=self._parse_ts(record),
+            src_ip=src_ip_m.group(1) if src_ip_m else record.get("src_ip"),
+            dst_ip=dst_ip_m.group(1) if dst_ip_m else record.get("dst_ip"),
+            host=record.get("hostname") or record.get("host"),
+            source_type="cisco_ios",
+            raw_data=serialize_raw_data(record),
+            raw=record,
+        )
+
+    def _parse_fortigate(self, record: dict[str, Any]) -> NormalizedEvent:
+        """Parse FortiGate firewall / UTM logs."""
+        logtype = str(record.get("type") or record.get("subtype") or "").lower()
+        class_uid = OCSFClass.NETWORK_ACTIVITY
+        if "utm" in logtype or "ips" in logtype or "av" in logtype:
+            class_uid = OCSFClass.DETECTION_FINDING
+        elif "event" in logtype:
+            class_uid = OCSFClass.PROCESS_ACTIVITY
+        return NormalizedEvent(
+            class_uid=class_uid,
+            activity_name=str(record.get("action") or record.get("subtype") or "FortiGate Event"),
+            timestamp=self._parse_ts(record),
+            src_ip=record.get("srcip") or record.get("src_ip"),
+            src_port=self._int_or_none(record.get("srcport") or record.get("src_port")),
+            dst_ip=record.get("dstip") or record.get("dst_ip"),
+            dst_port=self._int_or_none(record.get("dstport") or record.get("dst_port")),
+            protocol=record.get("proto") or record.get("protocol"),
+            user=record.get("srcuser") or record.get("user"),
+            host=record.get("devname"),
+            domain=record.get("hostname") or record.get("url"),
+            source_type="fortigate",
+            raw_data=serialize_raw_data(record),
+            raw=record,
+        )
+
+    def _parse_leef(self, record: dict[str, Any]) -> NormalizedEvent:
+        """Parse LEEF (Log Event Enhanced Format) from IBM QRadar."""
+        # LEEF format: LEEF:version|vendor|product|version|eventId|key=val\tkey=val
+        raw_msg = str(record.get("raw") or record.get("message") or "")
+        attrs: dict[str, str] = dict(record)  # start with parsed fields
+        if raw_msg.startswith("LEEF:"):
+            try:
+                parts = raw_msg.split("|", 5)
+                if len(parts) >= 6:
+                    ext_raw = parts[5]
+                    sep = "\t" if "\t" in ext_raw else " "
+                    for kv in ext_raw.split(sep):
+                        if "=" in kv:
+                            k, _, v = kv.partition("=")
+                            attrs[k.strip()] = v.strip()
+            except Exception:  # noqa: BLE001
+                pass
+        return NormalizedEvent(
+            class_uid=OCSFClass.DETECTION_FINDING,
+            activity_name=str(attrs.get("devEventId") or attrs.get("cat") or "LEEF Event"),
+            timestamp=self._parse_ts(record),
+            src_ip=attrs.get("src") or attrs.get("sourceAddress"),
+            src_port=self._int_or_none(attrs.get("srcPort") or attrs.get("spt")),
+            dst_ip=attrs.get("dst") or attrs.get("destinationAddress"),
+            dst_port=self._int_or_none(attrs.get("dstPort") or attrs.get("dpt")),
+            user=attrs.get("usrName") or attrs.get("userName"),
+            host=attrs.get("dvchost") or attrs.get("deviceHostName"),
+            process_name=attrs.get("procName") or attrs.get("sourceProcessName"),
+            source_type="leef",
+            raw_data=serialize_raw_data(record),
+            raw=record,
+        )
+
+    def _parse_clf(self, record: dict[str, Any]) -> NormalizedEvent:
+        """Parse Apache/Nginx Combined Log Format (CLF) records."""
+        request = str(record.get("request") or "")
+        method = verb = ""
+        if request:
+            parts = request.split(" ", 2)
+            method = parts[0] if parts else ""
+            verb = parts[1] if len(parts) > 1 else ""
+        return NormalizedEvent(
+            class_uid=OCSFClass.HTTP_ACTIVITY,
+            activity_name=f"HTTP {method} {verb}" if method else "Web Request",
+            timestamp=self._parse_ts(record),
+            src_ip=record.get("remote_addr") or record.get("clientip") or record.get("client_ip"),
+            user=record.get("remote_user") or record.get("ident"),
+            domain=record.get("host") or record.get("server_name"),
+            source_type="clf",
+            raw_data=serialize_raw_data(record),
+            raw=record,
+        )
+
+    def _parse_windows_dhcp(self, record: dict[str, Any]) -> NormalizedEvent:
+        """Parse Windows DHCP Server log records."""
+        event_id = self._int_or_none(record.get("ID") or record.get("EventID"))
+        action_map = {
+            10: "DHCP Assigned",
+            11: "DHCP Renew",
+            12: "DHCP Released",
+            13: "DHCP Not Found",
+            14: "DHCP Declined",
+            15: "DHCP Lease Expired",
+        }
+        return NormalizedEvent(
+            class_uid=OCSFClass.NETWORK_ACTIVITY,
+            activity_name=action_map.get(event_id or 0, f"DHCP Event {event_id}"),
+            timestamp=self._parse_ts(record),
+            src_ip=record.get("IPAddress") or record.get("ip_address"),
+            host=record.get("HostName") or record.get("hostname"),
+            source_type="windows_dhcp",
             raw_data=serialize_raw_data(record),
             raw=record,
         )

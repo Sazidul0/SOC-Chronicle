@@ -9,12 +9,14 @@ from typing import Any
 from soc_chronicle.config.settings import ChronicleSettings, get_settings
 from soc_chronicle.correlation.engine import CorrelationEngine
 from soc_chronicle.graph.engine import InvestigationGraphEngine
+from soc_chronicle.hunting.generator import HuntingGenerator
 from soc_chronicle.intake.engine import AlertIntakeEngine
 from soc_chronicle.ioc.engine import IOCExtractionEngine
 from soc_chronicle.mitre.mapper import MitreMapper
 from soc_chronicle.models.event import NormalizedEvent
 from soc_chronicle.models.evidence import Evidence
 from soc_chronicle.models.report import InvestigationReport
+from soc_chronicle.models.threat_intel import ThreatIntelResult
 from soc_chronicle.narrative.generator import NarrativeGenerator
 from soc_chronicle.normalization.engine import LogNormalizationEngine
 from soc_chronicle.plugins.registry import PluginRegistry
@@ -59,6 +61,7 @@ class InvestigationEngine:
         self.narrative = NarrativeGenerator()
         self.reporter = ReportGenerator()
         self.threat_intel = ThreatIntelEngine(self.settings)
+        self.hunting = HuntingGenerator()
 
     def investigate(
         self,
@@ -82,7 +85,7 @@ class InvestigationEngine:
         correlated_groups = self.correlator.correlate(events)
         flat_events = [e for group in correlated_groups for e in group] if correlated_groups else events
 
-        enrichment_results: list[dict[str, Any]] = []
+        enrichment_results: list[ThreatIntelResult] = []
         malicious_hashes: set[str] = set()
         if enrich and iocs:
             enrichment_results = await self.threat_intel.enrich_all(iocs)
@@ -102,7 +105,7 @@ class InvestigationEngine:
             blast = self.graph_engine.blast_radius(graph, origin)
 
         mitre = self.mitre_mapper.map_events(flat_events)
-        risk = self.risk_engine.assess(flat_events, iocs, malicious_hashes)
+        risk = self.risk_engine.assess(flat_events, iocs, malicious_hashes, None, mitre)
         summary, narrative, executive, actions = self.narrative.generate(
             alert_obj, timeline, flat_events, patient_zero, root_cause, evidence
         )
@@ -110,6 +113,9 @@ class InvestigationEngine:
         affected = sorted(
             h for h in ({e.host for e in flat_events if e.host} | {alert_obj.host}) if h
         )
+
+        # Generate hunting artifacts
+        hunting_artifacts = self.hunting.generate(flat_events, iocs)
 
         return InvestigationReport(
             alert=alert_obj,
@@ -127,7 +133,13 @@ class InvestigationEngine:
             root_cause=root_cause,
             blast_radius=blast,
             recommended_actions=actions,
-            metadata={"enrichment": enrichment_results, "event_count": len(flat_events)},
+            metadata={
+                "enrichment": [r.model_dump() for r in enrichment_results],
+                "event_count": len(flat_events),
+                "hunting": hunting_artifacts,
+                "mitre_chain": self.mitre_mapper.get_tactic_chain(mitre),
+                "chain_score": self.mitre_mapper.chain_score(mitre),
+            },
         )
 
     def _load_events(self, logs: str | Path | None) -> list[NormalizedEvent]:

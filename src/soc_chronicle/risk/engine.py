@@ -10,6 +10,7 @@ import yaml
 from soc_chronicle.models.event import NormalizedEvent, OCSFClass
 from soc_chronicle.models.evidence import EvidenceRef
 from soc_chronicle.models.ioc import IOC, IOCType
+from soc_chronicle.models.mitre import MitreMapping
 from soc_chronicle.models.report import RiskAssessment, RiskFactor
 
 # Default built-in rules: (rule_id, score, description)
@@ -28,6 +29,16 @@ _DEFAULT_RULES: list[tuple[str, int, str]] = [
     ("dns_tunneling_indicator", 15, "DNS tunneling indicator"),
     ("scheduled_task_creation", 10, "Scheduled task created for persistence"),
     ("multiple_failed_logins", 10, "Multiple authentication failures"),
+    # New rules
+    ("ransomware_family", 20, "Known ransomware family identified"),
+    ("rat_family", 15, "Remote access trojan (RAT) family identified"),
+    ("tactic_chain_bonus", 10, "Multi-tactic attack chain detected"),
+    ("temporal_clustering", 10, "High event density in short time window (compressed attack)"),
+    ("dc_target", 15, "Domain controller targeted"),
+    ("cobalt_strike", 25, "Cobalt Strike beacon indicators"),
+    ("impact_activity", 20, "Impact phase activity (data destruction/ransomware)"),
+    ("cloud_exfiltration", 15, "Data exfiltration to cloud storage"),
+    ("cve_exploitation", 20, "CVE exploitation attempt"),
 ]
 
 # Processes associated with privilege escalation
@@ -53,6 +64,22 @@ _C2_PORTS = {4444, 1234, 8888, 9999, 1337, 31337, 4321, 6666, 7777, 8443, 1080}
 _CRED_DUMP_PROCESSES = {"lsass.exe", "mimikatz", "procdump.exe", "comsvcs.dll", "wce.exe", "fgdump.exe", "pwdump"}
 _PERSISTENCE_PATHS = {"run", "runonce", "services", "schedule", "currentversion\\run", "winlogon", "appinit_dlls"}
 _SCHEDULED_TASK_PROCESSES = {"schtasks.exe", "at.exe"}
+_RANSOMWARE_FAMILIES = {
+    "wannacry", "notpetya", "ryuk", "revil", "conti", "blackcat", "lockbit",
+    "darkside", "maze", "sodinokibi", "clop", "egregor", "blackmatter",
+    "hive", "alphv", "play", "royal", "akira",
+}
+_RAT_FAMILIES = {
+    "cobalt strike", "cobaltstrike", "meterpreter", "empire", "quasar",
+    "asyncrat", "nanocore", "njrat", "remcos", "darkcomet", "luminosity",
+    "poison ivy", "gh0st", "pandora", "warzone",
+}
+_IMPACT_PROCESSES = {
+    "vssadmin.exe", "wbadmin.exe", "bcdedit.exe", "cipher.exe",
+    "format.exe", "fsutil.exe", "del.exe", "rd.exe",
+}
+_DC_HOSTNAME_PATTERNS = ["dc", "domaincontroller", "addc", "adds", "pdc", "bdc"]
+_CLOUD_EXFIL_PROCESSES = {"rclone", "rclone.exe", "aws", "gsutil", "azcopy", "azcopy.exe"}
 
 
 class RiskAssessmentEngine:
@@ -100,10 +127,12 @@ class RiskAssessmentEngine:
         iocs: list[IOC],
         enrichment_malicious: set[str] | None = None,
         enrichment_results: list[dict[str, Any]] | None = None,
+        mitre_mappings: list[MitreMapping] | None = None,
     ) -> RiskAssessment:
         """Run all risk rules and return a scored, evidence-traced assessment."""
         enrichment_malicious = enrichment_malicious or set()
         enrichment_results = enrichment_results or []
+        mitre_mappings = mitre_mappings or []
         factors: list[RiskFactor] = []
         triggered: set[str] = set()
 
@@ -111,6 +140,18 @@ class RiskAssessmentEngine:
             if rule_id not in triggered:
                 triggered.add(rule_id)
                 factors.append(self._factor(rule_id, evts, detail))
+
+        # ── Tactic Chain Bonus ────────────────────────────────────────────────
+        tactic_set = {m.tactic for m in mitre_mappings if m.tactic}
+        if len(tactic_set) > 2:
+            bonus = (len(tactic_set) - 2) * 10
+            triggered.add("tactic_chain_bonus")
+            factors.append(RiskFactor(
+                label=f"Multi-tactic attack chain detected ({len(tactic_set)} tactics)",
+                score=bonus,
+                confidence=0.9,
+                evidence=[],
+            ))
 
         # ── Known malicious hash ──────────────────────────────────────────────
         hash_iocs = {i.value for i in iocs if i.type in {IOCType.SHA256, IOCType.SHA1, IOCType.MD5}}
@@ -227,8 +268,98 @@ class RiskAssessmentEngine:
                     add("dns_tunneling_indicator", [event], f"Suspicious long DNS query: {domain[:50]}...")
                     break
 
-        total = min(sum(f.score for f in factors), 100)
-        return RiskAssessment(total_score=total, factors=factors)
+        # ── Ransomware / RAT family detection ─────────────────────────────────
+        for ioc in iocs:
+            if hasattr(ioc, "malware_family") and ioc.malware_family:
+                fam = ioc.malware_family.lower()
+                if any(r in fam for r in _RANSOMWARE_FAMILIES):
+                    add("ransomware_family", events[:1], f"Ransomware family: {ioc.malware_family}")
+                elif any(r in fam for r in _RAT_FAMILIES):
+                    add("rat_family", events[:1], f"RAT family: {ioc.malware_family}")
+
+        # ── Domain controller targeting ────────────────────────────────────────
+        for event in events:
+            host = (event.host or "").lower()
+            if any(pat in host for pat in _DC_HOSTNAME_PATTERNS):
+                add("dc_target", [event], f"Domain controller targeted: {event.host}")
+                break
+
+        # ── Cloud exfiltration tools ───────────────────────────────────────────
+        for event in events:
+            proc = (event.process_name or "").lower().split("\\")[-1].split("/")[-1]
+            if proc in _CLOUD_EXFIL_PROCESSES:
+                add("cloud_exfiltration", [event], f"Cloud exfiltration tool observed: {proc}")
+                break
+
+        # ── Impact activity ────────────────────────────────────────────────────
+        for event in events:
+            proc = (event.process_name or "").lower().split("\\")[-1].split("/")[-1]
+            if proc in _IMPACT_PROCESSES:
+                add("impact_activity", [event], f"Impact-phase process: {proc}")
+                break
+
+        # ── CVE exploitation ───────────────────────────────────────────────────
+        for ioc in iocs:
+            if ioc.type == IOCType.CVE:
+                add("cve_exploitation", events[:1], f"CVE indicator observed: {ioc.value}")
+                break
+
+        # ── Temporal clustering: many events in < 5 minute window ─────────────
+        if len(events) > 10:
+            from datetime import timedelta
+            sorted_events = sorted(events, key=lambda e: e.timestamp)
+            window = timedelta(minutes=5)
+            for i in range(len(sorted_events)):
+                window_events = [
+                    e for e in sorted_events[i:]
+                    if e.timestamp - sorted_events[i].timestamp <= window
+                ]
+                if len(window_events) >= 10:
+                    add(
+                        "temporal_clustering",
+                        window_events[:3],
+                        f"{len(window_events)} events in 5-minute window (compressed attack)",
+                    )
+                    break
+
+        total_score = min(sum(f.score for f in factors), 100)
+
+        # ── Asset criticality multiplier ───────────────────────────────────────
+        criticality_mult = 1.0
+        for event in events:
+            host = (event.host or "").lower()
+            if any(pat in host for pat in _DC_HOSTNAME_PATTERNS):
+                criticality_mult = 1.5
+                break
+            if any(srv in host for srv in ["srv", "server", "svr", "prod"]):
+                criticality_mult = max(criticality_mult, 1.2)
+        
+        adjusted_score = min(100, int(total_score * criticality_mult))
+        
+        justifications = []
+        if criticality_mult > 1.0:
+            justifications.append(f"Score multiplied by {criticality_mult}x due to critical asset involvement.")
+
+        # ── Severity band ──────────────────────────────────────────────────────
+        if adjusted_score >= 80:
+            severity = "CRITICAL"
+        elif adjusted_score >= 60:
+            severity = "HIGH"
+        elif adjusted_score >= 40:
+            severity = "MEDIUM"
+        elif adjusted_score >= 20:
+            severity = "LOW"
+        else:
+            severity = "INFORMATIONAL"
+            
+        justifications.append(f"Final score {adjusted_score} mapped to {severity} severity band.")
+
+        return RiskAssessment(
+            total_score=adjusted_score,
+            severity=severity,
+            severity_justification=" ".join(justifications),
+            factors=factors
+        )
 
     def _factor(self, rule_id: str, events: list[NormalizedEvent], detail: str) -> RiskFactor:
         score = self._score(rule_id)
@@ -242,4 +373,4 @@ class RiskAssessmentEngine:
             )
             for e in events[:3]
         ]
-        return RiskFactor(label=f"{label}: {detail}", score=score, evidence=evidence)
+        return RiskFactor(label=f"{label}: {detail}", score=score, confidence=0.85, evidence=evidence)

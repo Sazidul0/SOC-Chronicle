@@ -19,25 +19,20 @@ from soc_chronicle.models.timeline import Timeline
 class RiskFactor(BaseModel):
     label: str
     score: int
+    confidence: float = 1.0
     evidence: list[EvidenceRef] = Field(default_factory=list)
 
 
 class RiskAssessment(BaseModel):
     total_score: int = Field(ge=0, le=100)
     max_score: int = 100
+    severity: str = "INFORMATIONAL"
+    severity_justification: str = ""
     factors: list[RiskFactor] = Field(default_factory=list)
 
     @property
     def severity_label(self) -> str:
-        if self.total_score >= 80:
-            return "critical"
-        if self.total_score >= 60:
-            return "high"
-        if self.total_score >= 40:
-            return "medium"
-        if self.total_score >= 20:
-            return "low"
-        return "informational"
+        return self.severity.lower()
 
 
 class RecommendedAction(BaseModel):

@@ -30,7 +30,15 @@ class ChronicleSettings(BaseSettings):
     default_timezone: str = "UTC"
     correlation_window_seconds: int = 3600
     deduplicate_iocs: bool = True
+
+    # Threat intel settings
     threat_intel: dict[str, ThreatIntelProviderConfig] = Field(default_factory=dict)
+    cache_ttl_seconds: int = 14400          # 4 hours
+    max_enrichment_concurrency: int = 10
+
+    # Optional API keys for keyed providers (convenience shortcuts)
+    otx_api_key: str | None = None
+    greynoise_api_key: str | None = None
 
     @classmethod
     def from_file(cls, path: Path) -> ChronicleSettings:

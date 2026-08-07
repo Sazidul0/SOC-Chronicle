@@ -24,15 +24,14 @@ SOC-Chronicle sits between existing detection platforms (SIEM, EDR, XDR, Cloud S
 - **Root cause analysis** — patient zero, initial compromise, blast radius
 - **Deterministic analysis** — explainable outputs, no black-box scoring
 
-## Key Capabilities (v0.2.0)
+## Key Capabilities & Upgrades (Industry-Standard Features)
 
-- **Unified Log Normalization**: Maps logs from Sysmon, Microsoft Sentinel, Okta, PAN-OS, CEF, Zeek, Windows Security, and more into an OCSF-aligned schema with large file stream support.
-- **Automated Correlation**: Links events temporally and directionally using an in-memory or DuckDB-powered correlation engine.
-- **MITRE ATT&CK Mapping**: High-fidelity detection of over 70+ techniques including LOLBin abuse, credential access tools, network C2, and lateral movement.
-- **Threat Intelligence**: Built-in free enrichment from VirusTotal, Shodan InternetDB, IP-API, AlienVault OTX, and GreyNoise.
-- **Interactive Reporting**: Generates a professional HTML report featuring a dynamic D3.js attack graph, risk gauge, IOC tables, and a chronological attack narrative.
-- **Case Management**: Triage workflow allowing creation of cases, attaching notes/artifacts, and exporting case summaries.
-- **Live Ingestion**: Supports parsing Windows EVTX files, watching log directories, Syslog UDP/TCP, and HTTP webhooks.
+- **Deep IOC Extraction**: Parses domains, IP addresses (IPv4/IPv6), Hashes (MD5, SHA1, SHA256, SHA512, IMPHASH, SSDEEP, TLSH), TLS fingerprints (JA3/JA3S, JARM), Vulnerabilities (CVE IDs), Autonomous System Numbers (ASN), CIDR blocks, Cryptocurrency wallets (BTC/XMR), and dynamically un-defangs indicators (`hxxp://`, `[.]`). Base64-encoded PowerShell payloads are automatically decoded and re-scanned.
+- **Robust Threat Intel Engine**: Supports **9 different providers**. Free providers (MalwareBazaar, URLhaus, ThreatFox, Shodan InternetDB, IP-API) require no keys and are enabled by default. Integrates key-gated providers (VirusTotal, AbuseIPDB, AlienVault OTX, GreyNoise). Automatically normalizes findings into aggregated confidence and threat scores with smart disk-backed TTL caching and rate limiting.
+- **MITRE ATT&CK Mapping (v15)**: Extensive capability to map processes, PowerShell usage (AMSI bypass, hidden windows, encoded commands), network C2 activity, Linux persistence (`cron`, `/tmp`), and Cloud Activity (AWS CloudTrail, Azure) into exact sub-techniques. Evaluates tactical attack chains.
+- **Advanced Log Normalization**: Ingests logs from a vast array of sources including Windows Security, Sysmon, Zeek, Auditd, Azure Activity, AWS VPC Flow, GCP Cloud Logging, GitHub Audit, K8s Audit, Microsoft Defender for Endpoint, Cisco IOS, FortiGate, LEEF (QRadar), and Apache/Nginx CLF into an OCSF-aligned schema.
+- **Risk Assessment**: Generates justifiable risk scores incorporating MITRE tactic chain bonuses, asset criticality multipliers (e.g., Domain Controllers), temporal clustering (compressed attack detection), and malware family evaluation (Ransomware/RAT).
+- **Proactive Threat Hunting**: Translates investigation findings automatically into operational hunting queries, outputting ready-to-use artifacts in Sigma, YARA, Elastic EQL, KQL (Defender/Sentinel), Splunk SPL, QRadar AQL, and OpenSearch DSL formats.
 
 ## Installation
 
@@ -46,30 +45,41 @@ Install with optional live ingest connectors and PDF export capability:
 pip install soc-chronicle[all]
 ```
 
-Or pick specific dependencies: `[evtx]`, `[watch]`, `[serve]`, `[pdf]`.
+## Detailed Use Cases
 
-## Quick Start
-
-Run a full automated investigation and generate a professional interactive HTML report:
-
+### Use Case 1: Automated SIEM Alert Investigation
+When a generic SIEM alert triggers, investigators traditionally spend hours piecing together logs. SOC-Chronicle automates this by correlating events to a timeline and extracting indicators:
 ```bash
 chronicle investigate examples/alert.json --logs examples/logs/ --enrich -o report.html --format html
 ```
+**Outcome**: You receive an interactive HTML report with a full D3.js timeline, graph of the attack, patient zero identification, and integrated Threat Intelligence scores from tools like MalwareBazaar and URLhaus.
 
-## Triage & Case Management Workflow
+### Use Case 2: Proactive Threat Hunting Pivot
+During an investigation, you discover a suspicious binary or C2 IP. Rather than manually crafting queries to sweep the rest of your environment, SOC-Chronicle generates them for you:
+```bash
+chronicle hunt --alert alert.json --logs /path/to/logs
+```
+**Outcome**: Automatic generation of:
+- **Sigma Rules** for process tracking.
+- **YARA Rules** using file hashes and string extraction.
+- **KQL/Splunk/EQL/AQL Queries** covering network IPs, domain connections, and parent-child execution chains.
 
-Create a case directly from an investigation report:
+### Use Case 3: Behavioral Chain Risk Assessment
+If an attacker triggers multiple low-severity alerts (e.g. Discovery -> Credential Access -> Lateral Movement), standard systems may ignore them individually. SOC-Chronicle correlates them and provides a *Tactic Chain Bonus* and *Asset Criticality Multiplier*:
+```python
+from soc_chronicle import InvestigationEngine
+engine = InvestigationEngine()
+report = engine.investigate(alert="examples/alert.json", logs="./examples/logs")
+print(f"Risk Severity: {report.risk.severity}")
+print(f"Justification: {report.risk.severity_justification}")
+```
+**Outcome**: The script accurately identifies the multi-stage tactic chain against a high-value asset and appropriately classifies the incident as `CRITICAL` risk.
+
+### Use Case 4: Incident Triage & Case Management
+Analysts can instantly create cases from investigations and track notes collaboratively over time:
 ```bash
 chronicle case new --from-report report.json
-```
-
-List active cases:
-```bash
 chronicle case list --status open
-```
-
-Add investigation notes:
-```bash
 chronicle case note CASE-A1B2C3D4 "Confirmed lateral movement via SMB."
 ```
 
@@ -82,39 +92,6 @@ chronicle case note CASE-A1B2C3D4 "Confirmed lateral movement via SMB."
 | Syslog | Receive RFC 5424/3164 Syslog (UDP) | `chronicle ingest syslog --port 514` |
 | Webhook | Receive JSON HTTP POSTs | `chronicle serve --port 8514` |
 
-## Threat Hunting Pack
-
-Automatically generate pivoting queries across Sigma, Splunk, Sentinel, and Elastic for IOCs identified in the alert:
-
-```bash
-chronicle hunt --alert alert.json --logs /path/to/logs
-```
-
-## Advanced Search
-
-Search the normalized event database (DuckDB) quickly:
-
-```bash
-chronicle search --query "powershell.exe" --field process
-```
-
-## Python API
-
-```python
-from soc_chronicle import InvestigationEngine
-
-engine = InvestigationEngine()
-report = engine.investigate(
-    alert="examples/alert.json",
-    logs="./examples/logs",
-)
-
-print(report.summary)
-print(report.narrative)
-print(f"Risk: {report.risk.total_score}/100")
-print(f"Patient zero: {report.patient_zero}")
-```
-
 ## Architecture
 
 ```
@@ -124,36 +101,39 @@ Security Alert → Alert Intake → IOC Extraction + Log Normalization (OCSF)
                                       ↓
               Attack Graph ← Timeline Engine → Risk Engine
                                       ↓
-                        Incident Narrative Generator
+                        Incident Narrative Generator + Threat Hunt Artifacts
                                       ↓
                     Interactive HTML / JSON / Markdown Reports
 ```
 
 ## Configuration
 
-Create `chronicle.yaml`:
+Create `chronicle.yaml` for advanced behavior control:
 
 ```yaml
 log_level: INFO
 correlation_window_seconds: 3600
+cache_ttl_seconds: 14400
+max_enrichment_concurrency: 10
 threat_intel:
   virustotal:
     enabled: true
     api_key: "${VT_API_KEY}"
+  otx:
+    enabled: true
+    api_key: "${OTX_API_KEY}"
 ```
 
 ## Plugin Development
 
-Register plugins via entry points in `pyproject.toml`:
+Register custom log parsers or exporters via entry points in `pyproject.toml`:
 
 ```toml
 [project.entry-points."soc_chronicle.plugins"]
 my_parser = "my_package:MyLogParser"
 ```
 
-Implement `LogParserPlugin`, `EnrichmentProviderPlugin`, or `ExporterPlugin` from `soc_chronicle.plugins.registry`.
-
-## Development
+## Development & Testing
 
 ```bash
 pip install -e ".[dev,all]"
