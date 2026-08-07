@@ -22,8 +22,8 @@ app = typer.Typer(
     help="soc-chronicle — Attack Investigation & Incident Narrative Engine",
     no_args_is_help=True,
 )
-case_app = typer.Typer(name="case", help="Case management and triage")
-ingest_app = typer.Typer(name="ingest", help="Live ingest connectors")
+case_app = typer.Typer(name="case", help="Case management and triage, including creating, listing, viewing, and exporting cases to markdown or json formats")
+ingest_app = typer.Typer(name="ingest", help="Live ingest connectors for processing EVTX files, syslog streams, and directory watching")
 app.add_typer(case_app)
 app.add_typer(ingest_app)
 
@@ -37,7 +37,7 @@ def main(
     configure_logging("DEBUG" if verbose else "INFO")
 
 
-@app.command()
+@app.command(help="Run a full investigation on an alert, normalize logs, extract IOCs, map to MITRE ATT&CK, and generate a comprehensive incident report (markdown, html, json).")
 def investigate(
     alert: Annotated[Path, typer.Argument(help="Alert file (JSON/YAML) or inline JSON path")],
     logs: Annotated[Path | None, typer.Option("--logs", "-l", help="Log directory or file")] = None,
@@ -45,7 +45,6 @@ def investigate(
     output: Annotated[Path | None, typer.Option("--output", "-o", help="Write report to file")] = None,
     format: Annotated[str, typer.Option("--format", "-f", help="Output format (markdown, html, json)")] = "markdown",
 ) -> None:
-    """Run a full investigation on an alert."""
     engine = InvestigationEngine()
     with console.status("[bold green]Investigating..."):
         report = engine.investigate(alert=alert, logs=logs, enrich=enrich)
@@ -67,11 +66,10 @@ def investigate(
         console.print(f"[green]Report written to[/green] {output}")
 
 
-@app.command()
+@app.command(help="Extract and display Indicators of Compromise (IOCs) from a text file and perform threat intelligence enrichment.")
 def enrich(
     indicators: Annotated[Path, typer.Argument(help="File with one indicator per line")],
 ) -> None:
-    """Extract and display IOCs from a text file."""
     text = indicators.read_text()
     engine = IOCExtractionEngine()
     iocs = engine.extract_from_texts([text], source=str(indicators))
@@ -85,11 +83,10 @@ def enrich(
     console.print(table)
 
 
-@app.command()
+@app.command(help="Build and display a chronological timeline of events from normalized log directories or files.")
 def timeline(
     logs: Annotated[Path, typer.Argument(help="Log directory or file")],
 ) -> None:
-    """Build and display a timeline from logs."""
     normalizer = LogNormalizationEngine()
     events = (
         normalizer.normalize_directory(logs)
@@ -112,12 +109,11 @@ def timeline(
     console.print(table)
 
 
-@app.command()
+@app.command(help="Build and export a visual attack graph from logs showing relationships between processes, hosts, and users.")
 def graph(
     logs: Annotated[Path, typer.Argument(help="Log directory or file")],
     output: Annotated[Path | None, typer.Option("--output", "-o")] = None,
 ) -> None:
-    """Build attack graph from logs."""
     normalizer = LogNormalizationEngine()
     events = (
         normalizer.normalize_directory(logs)
@@ -132,13 +128,12 @@ def graph(
         console.print(f"[green]Graph written to[/green] {output}")
 
 
-@app.command(name="report")
+@app.command(name="report", help="Re-export an existing investigation report to a specified format (markdown, html, json).")
 def report_cmd(
     incident: Annotated[Path, typer.Argument(help="Investigation JSON report")],
     output: Annotated[Path, typer.Option("--output", "-o", help="Path to write the report")],
     format: Annotated[str, typer.Option("--format", "-f", help="Output format (markdown, html, json)")] = "markdown",
 ) -> None:
-    """Re-export an existing investigation report to a specified format (markdown, html, json)."""
     from soc_chronicle.models.report import InvestigationReport
 
     data = json.loads(incident.read_text())
@@ -247,12 +242,11 @@ def case_export(case_id: str, format: str = typer.Option("markdown", "--format",
 
 # ── Search CLI ────────────────────────────────────────────────────────────────
 
-@app.command()
+@app.command(help="Search the DuckDB event store for specific indicators, users, hosts, or activity patterns.")
 def search(
     query: Annotated[str, typer.Option("--query", "-q", help="Search string")],
     field: Annotated[str | None, typer.Option("--field", "-f", help="Specific field to search")] = None,
 ) -> None:
-    """Search DuckDB event store."""
     from soc_chronicle.search.engine import SearchEngine
     engine = SearchEngine("chronicle.duckdb")
     fields = [field] if field else None
@@ -330,9 +324,8 @@ def ingest_syslog(port: int = typer.Option(514, "--port")) -> None:
             console.print(record)
     asyncio.run(run())
 
-@app.command("serve")
+@app.command("serve", help="Start a webhook receiver server to continuously ingest alerts from external systems.")
 def serve(port: int = typer.Option(8514, "--port")) -> None:
-    """Start webhook receiver."""
     import asyncio
 
     from soc_chronicle.connectors.base import ConnectorConfig
@@ -349,12 +342,11 @@ def serve(port: int = typer.Option(8514, "--port")) -> None:
 
 # ── Hunting CLI ───────────────────────────────────────────────────────────────
 
-@app.command()
+@app.command(help="Run the hunting generator to produce threat hunting queries for platforms like Wazuh, Splunk, or Elastic.")
 def hunt(
     logs: Annotated[Path, typer.Option("--logs", "-l", help="Log directory")],
     alert: Annotated[Path | None, typer.Option("--alert", "-a", help="Alert file for context")] = None,
 ) -> None:
-    """Run hunting generator and display queries."""
     from soc_chronicle.hunting.generator import HuntingGenerator
     
     gen = HuntingGenerator()
