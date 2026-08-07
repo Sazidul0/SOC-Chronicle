@@ -24,14 +24,14 @@ SOC-Chronicle sits between existing detection platforms (SIEM, EDR, XDR, Cloud S
 - **Root cause analysis** — patient zero, initial compromise, blast radius
 - **Deterministic analysis** — explainable outputs, no black-box scoring
 
-## Key Capabilities & Upgrades (Industry-Standard Features)
+## Core System Capabilities
 
-- **Deep IOC Extraction**: Parses domains, IP addresses (IPv4/IPv6), Hashes (MD5, SHA1, SHA256, SHA512, IMPHASH, SSDEEP, TLSH), TLS fingerprints (JA3/JA3S, JARM), Vulnerabilities (CVE IDs), Autonomous System Numbers (ASN), CIDR blocks, Cryptocurrency wallets (BTC/XMR), and dynamically un-defangs indicators (`hxxp://`, `[.]`). Base64-encoded PowerShell payloads are automatically decoded and re-scanned.
-- **Robust Threat Intel Engine**: Supports **9 different providers**. Free providers (MalwareBazaar, URLhaus, ThreatFox, Shodan InternetDB, IP-API) require no keys and are enabled by default. Integrates key-gated providers (VirusTotal, AbuseIPDB, AlienVault OTX, GreyNoise). Automatically normalizes findings into aggregated confidence and threat scores with smart disk-backed TTL caching and rate limiting.
-- **MITRE ATT&CK Mapping (v15)**: Extensive capability to map processes, PowerShell usage (AMSI bypass, hidden windows, encoded commands), network C2 activity, Linux persistence (`cron`, `/tmp`), and Cloud Activity (AWS CloudTrail, Azure) into exact sub-techniques. Evaluates tactical attack chains.
-- **Advanced Log Normalization**: Ingests logs from a vast array of sources including Windows Security, Sysmon, Zeek, Auditd, Azure Activity, AWS VPC Flow, GCP Cloud Logging, GitHub Audit, K8s Audit, Microsoft Defender for Endpoint, Cisco IOS, FortiGate, LEEF (QRadar), and Apache/Nginx CLF into an OCSF-aligned schema.
-- **Risk Assessment**: Generates justifiable risk scores incorporating MITRE tactic chain bonuses, asset criticality multipliers (e.g., Domain Controllers), temporal clustering (compressed attack detection), and malware family evaluation (Ransomware/RAT).
-- **Proactive Threat Hunting**: Translates investigation findings automatically into operational hunting queries, outputting ready-to-use artifacts in Sigma, YARA, Elastic EQL, KQL (Defender/Sentinel), Splunk SPL, QRadar AQL, and OpenSearch DSL formats.
+- **IOC Extraction**: Parses domains, IP addresses (IPv4/IPv6), hashes (MD5, SHA1, SHA256, SHA512, IMPHASH, SSDEEP, TLSH), TLS fingerprints, vulnerabilities (CVE IDs), ASNs, CIDR blocks, and cryptocurrency wallets. Dynamically un-defangs indicators and decodes Base64-encoded PowerShell payloads.
+- **Threat Intelligence Integration**: Queries 9 intelligence providers. Unauthenticated providers (MalwareBazaar, URLhaus, ThreatFox, Shodan InternetDB, IP-API) are enabled by default. Integrates with API-gated providers (VirusTotal, AbuseIPDB, AlienVault OTX, GreyNoise). Implements disk-backed TTL caching and rate limiting.
+- **MITRE ATT&CK Mapping (v15)**: Maps process execution, PowerShell usage, network C2 activity, Linux persistence, and cloud activity to specific sub-techniques to evaluate tactical attack chains.
+- **Log Normalization**: Ingests and normalizes logs from Windows Security, Sysmon, Zeek, Auditd, Azure Activity, AWS VPC Flow, GCP Cloud Logging, GitHub Audit, K8s Audit, Microsoft Defender for Endpoint, Cisco IOS, FortiGate, LEEF (QRadar), and Apache/Nginx CLF into an OCSF-aligned schema.
+- **Risk Assessment**: Calculates composite risk scores based on MITRE tactic progressions, asset criticality, temporal clustering, and malware family associations.
+- **Threat Hunting Artifact Generation**: Translates investigation findings into operational hunting queries formatted as Sigma, YARA, Elastic EQL, KQL, Splunk SPL, QRadar AQL, and OpenSearch DSL.
 
 ## Installation
 
