@@ -43,7 +43,7 @@ def investigate(
     logs: Annotated[Path | None, typer.Option("--logs", "-l", help="Log directory or file")] = None,
     enrich: Annotated[bool, typer.Option("--enrich", help="Enable threat intel enrichment")] = False,
     output: Annotated[Path | None, typer.Option("--output", "-o", help="Write report to file")] = None,
-    format: Annotated[str, typer.Option("--format", "-f", help="Output format")] = "markdown",
+    format: Annotated[str, typer.Option("--format", "-f", help="Output format (markdown, html, json)")] = "markdown",
 ) -> None:
     """Run a full investigation on an alert."""
     engine = InvestigationEngine()
@@ -135,10 +135,10 @@ def graph(
 @app.command(name="report")
 def report_cmd(
     incident: Annotated[Path, typer.Argument(help="Investigation JSON report")],
-    output: Annotated[Path, typer.Option("--output", "-o")],
-    format: Annotated[str, typer.Option("--format", "-f")] = "markdown",
+    output: Annotated[Path, typer.Option("--output", "-o", help="Path to write the report")],
+    format: Annotated[str, typer.Option("--format", "-f", help="Output format (markdown, html, json)")] = "markdown",
 ) -> None:
-    """Re-export an existing investigation report."""
+    """Re-export an existing investigation report to a specified format (markdown, html, json)."""
     from soc_chronicle.models.report import InvestigationReport
 
     data = json.loads(incident.read_text())
@@ -231,12 +231,18 @@ def case_close(case_id: str, resolution: str = typer.Option(..., "--resolution")
     console.print(f"[green]Closed {case_id}[/green]")
 
 @case_app.command("export")
-def case_export(case_id: str, format: str = typer.Option("markdown", "--format")) -> None:
-    """Export a case to Markdown."""
+def case_export(case_id: str, format: str = typer.Option("markdown", "--format", help="Output format (markdown, json)")) -> None:
+    """Export a case to a specific format."""
     from soc_chronicle.cases.manager import CaseManager
     manager = CaseManager("chronicle.duckdb")
-    path = Path(f"{case_id}.md")
-    manager.export_case_markdown(case_id, path)
+    
+    if format == "json":
+        path = Path(f"{case_id}.json")
+        manager.export_case_json(case_id, path)
+    else:
+        path = Path(f"{case_id}.md")
+        manager.export_case_markdown(case_id, path)
+        
     console.print(f"[green]Exported to {path}[/green]")
 
 # ── Search CLI ────────────────────────────────────────────────────────────────

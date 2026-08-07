@@ -159,5 +159,12 @@ class CaseManager:
         path.write_text("\n".join(lines))
         return path
 
+    def export_case_json(self, case_id: str, path: Path) -> Path:
+        case = self.store.get_case(case_id)
+        if not case:
+            raise ValueError(f"Case {case_id} not found")
+        path.write_text(case.model_dump_json(indent=2))
+        return path
+
     def close(self) -> None:
         self.store.close()
