@@ -92,7 +92,7 @@ class VirusTotalProvider(ThreatIntelProvider):
 
     async def enrich(self, ioc: IOC) -> ProviderResult:
         if not self.config.api_key:
-            return ProviderResult(provider=self.name, status="disabled", reason="missing_api_key",
+            return ProviderResult(provider=self.name, status="disabled", error="missing_api_key",
                                    ioc_value=ioc.value, ioc_type=ioc.type)
         endpoint = self._endpoint(ioc)
         if not endpoint:
