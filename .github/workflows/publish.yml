@@ -91,35 +91,11 @@ jobs:
           retention-days: 5
 
   # ──────────────────────────────────────────────────────────────────────
-  # Phase 3: Publish to TestPyPI first (safety net)
-  # ──────────────────────────────────────────────────────────────────────
-  publish-testpypi:
-    name: Publish to TestPyPI
-    needs: build
-    runs-on: ubuntu-latest
-    environment: testpypi
-    permissions:
-      id-token: write  # Required for OIDC Trusted Publishing
-
-    steps:
-      - name: Download build artifacts
-        uses: actions/download-artifact@v4
-        with:
-          name: dist
-          path: dist/
-
-      - name: Publish to TestPyPI
-        uses: pypa/gh-action-pypi-publish@release/v1
-        with:
-          repository-url: https://test.pypi.org/legacy/
-          skip-existing: true
-
-  # ──────────────────────────────────────────────────────────────────────
-  # Phase 4: Publish to Production PyPI
+  # Phase 3: Publish to Production PyPI
   # ──────────────────────────────────────────────────────────────────────
   publish-pypi:
     name: Publish to PyPI
-    needs: [build, publish-testpypi]
+    needs: build
     runs-on: ubuntu-latest
     environment: pypi
     permissions:
